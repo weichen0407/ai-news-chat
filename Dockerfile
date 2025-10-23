@@ -29,6 +29,6 @@ ENV NODE_ENV=production
 # 暴露端口（Railway会使用PORT环境变量）
 EXPOSE 3000
 
-# 启动命令
-CMD ["node", ".output/server/index.mjs"]
+# 启动命令（使用启动脚本以便看到详细日志）
+CMD ["node", "start.mjs"]
 
