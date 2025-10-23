@@ -4,7 +4,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   
   runtimeConfig: {
-    deepseekApiKey: process.env.DEEPSEEK_API_KEY,
+    deepseekApiKey: process.env.DEEPSEEK_API_KEY || '',
+    public: {}
   },
 
   // Railway会自动设置PORT环境变量
