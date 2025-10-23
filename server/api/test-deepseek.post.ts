@@ -10,6 +10,12 @@ export default defineEventHandler(async (event) => {
   console.log("- API密钥前缀:", config.deepseekApiKey?.substring(0, 10) || "undefined");
   console.log("- Authorization头:", `Bearer ${config.deepseekApiKey}`);
 
+  // 直接使用环境变量而不是runtimeConfig
+  const apiKey = process.env.DEEPSEEK_API_KEY || config.deepseekApiKey;
+  console.log("🔧 使用API密钥:", apiKey ? "已设置" : "未设置");
+  console.log("🔧 API密钥长度:", apiKey?.length || 0);
+  console.log("🔧 API密钥前缀:", apiKey?.substring(0, 10) || "undefined");
+
   try {
     const response = await fetch(
       "https://api.deepseek.com/v1/chat/completions",
@@ -17,7 +23,7 @@ export default defineEventHandler(async (event) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${config.deepseekApiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: "deepseek-chat",
