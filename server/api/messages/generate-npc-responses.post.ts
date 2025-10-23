@@ -122,7 +122,12 @@ ${chatHistory}
     if (!response.ok) {
       const errorText = await response.text()
       console.error('DeepSeek API调用失败:', response.status, errorText)
-      return { success: false, error: 'AI服务调用失败: ' + response.status }
+      console.error('响应头:', Object.fromEntries(response.headers.entries()))
+      console.error('请求头:', {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.deepseekApiKey}`
+      })
+      return { success: false, error: `AI服务调用失败: ${response.status} ${response.statusText}`, details: errorText }
     }
     
     const data = await response.json()
