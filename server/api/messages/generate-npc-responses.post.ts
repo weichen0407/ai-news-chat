@@ -145,7 +145,7 @@ ${chatHistory}
       console.error("响应头:", Object.fromEntries(response.headers.entries()));
       console.error("请求头:", {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${config.deepseekApiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       });
       return {
         success: false,
