@@ -66,11 +66,12 @@ export default defineEventHandler(async (event) => {
       
       const currentHistory = currentMessages.reverse().map(m => `${m.sender_name}: ${m.content}`).join('\n')
       
+      const apiKey = process.env.DEEPSEEK_API_KEY || config.deepseekApiKey;
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.deepseekApiKey}`
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
           model: 'deepseek-chat',

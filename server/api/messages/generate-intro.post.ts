@@ -35,11 +35,12 @@ export default defineEventHandler(async (event) => {
   console.log('=== 生成开场对话 ===')
   
   try {
+    const apiKey = process.env.DEEPSEEK_API_KEY || config.deepseekApiKey;
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.deepseekApiKey}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
