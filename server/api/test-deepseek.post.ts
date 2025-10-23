@@ -2,17 +2,12 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
 
   console.log("🧪 测试DeepSeek API调用");
-  console.log("🔍 API调试信息:");
-  console.log("- API密钥长度:", config.deepseekApiKey?.length || 0);
-  console.log(
-    "- API密钥前缀:",
-    config.deepseekApiKey?.substring(0, 10) || "undefined"
-  );
-  console.log(
-    "- API密钥后缀:",
-    config.deepseekApiKey?.substring(config.deepseekApiKey?.length - 10) ||
-      "undefined"
-  );
+  console.log("🔍 环境变量调试信息:");
+  console.log("- process.env.DEEPSEEK_API_KEY:", process.env.DEEPSEEK_API_KEY ? "已设置" : "未设置");
+  console.log("- process.env.DEEPSEEK_API_KEY长度:", process.env.DEEPSEEK_API_KEY?.length || 0);
+  console.log("- config.deepseekApiKey:", config.deepseekApiKey ? "已设置" : "未设置");
+  console.log("- config.deepseekApiKey长度:", config.deepseekApiKey?.length || 0);
+  console.log("- API密钥前缀:", config.deepseekApiKey?.substring(0, 10) || "undefined");
   console.log("- Authorization头:", `Bearer ${config.deepseekApiKey}`);
 
   try {
