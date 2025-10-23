@@ -3,6 +3,9 @@
   "version": "2.0.0",
   "description": "AI微信聊天模拟器 - 多人在线版",
   "private": true,
+  "engines": {
+    "node": ">=20.18.0"
+  },
   "scripts": {
     "dev": "nuxt dev --host 0.0.0.0 --port 3001",
     "build": "nuxt build",
