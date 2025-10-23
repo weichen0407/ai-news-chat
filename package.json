@@ -1,0 +1,24 @@
+{
+  "name": "ai-news-dialogue",
+  "version": "2.0.0",
+  "description": "AI微信聊天模拟器 - 多人在线版",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt dev --host 0.0.0.0 --port 3001",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.6.0",
+    "nuxt": "^3.13.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.4.0"
+  },
+  "devDependencies": {
+    "@nuxt/types": "^2.17.0",
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.10.0"
+  }
+}
