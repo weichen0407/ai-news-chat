@@ -56,6 +56,12 @@ export default defineEventHandler(async (event) => {
   console.log('最后一条消息:', lastMessage.sender_name, ':', lastMessage.content)
   
   try {
+    // 调试信息
+    console.log('🔍 API调试信息:')
+    console.log('- API密钥长度:', config.deepseekApiKey?.length || 0)
+    console.log('- API密钥前缀:', config.deepseekApiKey?.substring(0, 10) || 'undefined')
+    console.log('- Authorization头:', `Bearer ${config.deepseekApiKey}`)
+    
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
