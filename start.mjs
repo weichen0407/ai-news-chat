@@ -6,10 +6,21 @@ import { mkdirSync, existsSync } from 'fs'
 console.log('🚀 开始初始化...')
 console.log('当前工作目录:', process.cwd())
 console.log('环境变量检查:')
-console.log('- DEEPSEEK_API_KEY:', process.env.DEEPSEEK_API_KEY ? '✓ 已设置' : '✗ 未设置')
+console.log('- DEEPSEEK_API_KEY:', process.env.DEEPSEEK_API_KEY ? '✓ 已设置 (前10字符: ' + process.env.DEEPSEEK_API_KEY.substring(0, 10) + '...)' : '✗ 未设置')
 console.log('- SESSION_SECRET:', process.env.SESSION_SECRET ? '✓ 已设置' : '✗ 未设置')
 console.log('- PORT:', process.env.PORT || '3000')
 console.log('- HOST:', process.env.HOST || '0.0.0.0')
+
+// 验证API密钥格式
+if (!process.env.DEEPSEEK_API_KEY) {
+  console.error('❌ 致命错误: DEEPSEEK_API_KEY 环境变量未设置！')
+  process.exit(1)
+}
+if (!process.env.DEEPSEEK_API_KEY.startsWith('sk-')) {
+  console.error('❌ 致命错误: DEEPSEEK_API_KEY 格式不正确，应该以 sk- 开头')
+  process.exit(1)
+}
+console.log('✅ API密钥格式验证通过')
 
 try {
   // 创建data目录
