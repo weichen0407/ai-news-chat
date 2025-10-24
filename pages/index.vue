@@ -599,6 +599,8 @@ const getPresetNPCs = (roomId) => {
   height: 100vh;
   border-radius: 0;
   box-shadow: none;
+  transform: scale(0.85);
+  transform-origin: center center;
 }
 
 @media (max-width: 768px) {
