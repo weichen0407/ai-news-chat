@@ -287,7 +287,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 
 definePageMeta({
   middleware: "auth",
@@ -352,10 +352,25 @@ const joinRoleProfile = ref("");
 const joinRoleAvatar = ref("");
 const joinError = ref("");
 
+// 定时刷新房间列表（更新未读数）
+let refreshInterval = null;
+
 onMounted(async () => {
   await loadUser();
   await loadMyRooms();
   await loadCreatedRooms();
+  
+  // 每10秒刷新一次房间列表以更新未读数
+  refreshInterval = setInterval(async () => {
+    await loadMyRooms();
+  }, 10000);
+});
+
+// 清理定时器
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+  }
 });
 
 const loadUser = async () => {

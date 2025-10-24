@@ -1098,9 +1098,11 @@ const markAsRead = async () => {
   }
 };
 
-// 组件卸载时清理定时器
-onUnmounted(() => {
+// 组件卸载时清理定时器并标记已读
+onUnmounted(async () => {
   stopAutoMode();
+  // 离开房间时标记为已读
+  await markAsRead();
 });
 </script>
 
