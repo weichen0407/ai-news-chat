@@ -23,13 +23,19 @@
           >
             {{ isFullscreen ? "📱" : "🖥️" }}
           </button>
-          <button
-            v-if="isCreator"
-            @click="showEditModal = true"
-            class="btn-settings"
-          >
-            ⚙️ 设置
-          </button>
+           <button
+             @click="showRoomInfoModal = true"
+             class="btn-info"
+           >
+             ℹ️ 群信息
+           </button>
+           <button
+             v-if="isCreator"
+             @click="showEditModal = true"
+             class="btn-settings"
+           >
+             ⚙️ 设置
+           </button>
         </div>
       </div>
 
@@ -403,11 +409,89 @@
               {{ isSaving ? "保存中..." : "💾 保存" }}
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
+         </div>
+       </div>
+
+       <!-- 群信息弹窗 -->
+       <div
+         v-if="showRoomInfoModal"
+         class="modal-overlay"
+         @click="showRoomInfoModal = false"
+       >
+         <div class="room-info-modal" @click.stop>
+           <div class="room-info-header">
+             <h2>群信息</h2>
+             <button @click="showRoomInfoModal = false" class="btn-close">✕</button>
+           </div>
+           
+           <div class="room-info-content">
+             <!-- 群基本信息 -->
+             <div class="info-section">
+               <div class="room-avatar-large">
+                 <span v-if="roomInfo?.avatar && !roomInfo.avatar.startsWith('http')" class="avatar-emoji">{{ roomInfo.avatar }}</span>
+                 <img v-else-if="roomInfo?.avatar" :src="roomInfo.avatar" :alt="roomInfo.name" class="avatar-img" />
+                 <span v-else class="avatar-emoji">💬</span>
+               </div>
+               <h3>{{ roomInfo?.name }}</h3>
+               <p class="room-description">{{ roomInfo?.description }}</p>
+               <div class="room-stats">
+                 <span class="stat-item">{{ totalMemberCount }}人</span>
+                 <span class="stat-item">{{ npcCount }}个AI</span>
+                 <span class="stat-item">{{ memberCount }}个玩家</span>
+               </div>
+             </div>
+
+             <!-- 故事背景 -->
+             <div class="info-section">
+               <h4>📖 故事背景</h4>
+               <div class="story-background">
+                 {{ roomInfo?.event_background }}
+               </div>
+             </div>
+
+             <!-- 群成员 -->
+             <div class="info-section">
+               <h4>👥 群成员 ({{ totalMemberCount }})</h4>
+               <div class="members-list">
+                 <!-- 群主 -->
+                 <div class="member-item creator">
+                   <img :src="roomInfo?.creator?.avatar || '/avatars/placeholder.svg'" :alt="roomInfo?.creator?.nickname" class="member-avatar" />
+                   <div class="member-info">
+                     <div class="member-name">{{ roomInfo?.creator?.nickname }} (群主)</div>
+                     <div class="member-role">创建者</div>
+                   </div>
+                 </div>
+                 
+                 <!-- 其他成员 -->
+                 <div v-for="member in members" :key="member.id" class="member-item">
+                   <img :src="member.avatar || '/avatars/placeholder.svg'" :alt="member.nickname" class="member-avatar" />
+                   <div class="member-info">
+                     <div class="member-name">{{ member.nickname }}</div>
+                     <div class="member-role" v-if="member.role_name">{{ member.role_name }}</div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+
+             <!-- NPC角色 -->
+             <div class="info-section">
+               <h4>🤖 AI角色 ({{ npcCount }})</h4>
+               <div class="npcs-list">
+                 <div v-for="npc in npcs" :key="npc.id" class="npc-item-info">
+                   <img :src="npc.avatar || '/avatars/placeholder.svg'" :alt="npc.name" class="npc-avatar-info" />
+                   <div class="npc-info">
+                     <div class="npc-name">{{ npc.name }}</div>
+                     <div class="npc-profile">{{ npc.profile }}</div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
+   </div>
+ </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from "vue";
@@ -442,6 +526,7 @@ let autoModeInterval = null;
 const messagesContainer = ref(null);
 const showSettings = ref(false);
 const showEditModal = ref(false);
+const showRoomInfoModal = ref(false);
 const showAvatarPicker = ref(false);
 const showNPCAvatarPicker = ref(null);
 const originalEventBackground = ref("");
@@ -799,6 +884,16 @@ const formatMemberCount = () => {
   return `${total}人（${npcCount}AI+${playerCount}玩家）`;
 };
 
+// 计算属性
+const totalMemberCount = computed(() => {
+  const npcCount = npcs.value?.length || 0;
+  const playerCount = members.value?.length || 0;
+  return npcCount + playerCount;
+});
+
+const memberCount = computed(() => members.value?.length || 0);
+const npcCount = computed(() => npcs.value?.length || 0);
+
 const toggleAutoMode = () => {
   isAutoMode.value = !isAutoMode.value;
 
@@ -1041,6 +1136,7 @@ onUnmounted(() => {
   color: #888;
 }
 
+.btn-info,
 .btn-settings {
   padding: 0.3rem 0.6rem;
   background: transparent;
@@ -1050,6 +1146,7 @@ onUnmounted(() => {
   font-size: 1rem;
 }
 
+.btn-info:active,
 .btn-settings:active {
   opacity: 0.6;
 }
@@ -1893,5 +1990,176 @@ onUnmounted(() => {
 .emoji-option-small:hover {
   background: #e9ecef;
   transform: scale(1.1);
+}
+
+/* 群信息弹窗样式 */
+.room-info-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.room-info-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+}
+
+.room-info-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.room-info-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.info-section {
+  margin-bottom: 2rem;
+}
+
+.info-section:last-child {
+  margin-bottom: 0;
+}
+
+.info-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.room-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  margin: 0 auto 1rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #07c160 0%, #05a850 100%);
+  overflow: hidden;
+}
+
+.avatar-emoji {
+  font-size: 2.5rem;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.room-description {
+  text-align: center;
+  color: #666;
+  margin: 0.5rem 0 1rem 0;
+  line-height: 1.5;
+}
+
+.room-stats {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stat-item {
+  background: #f0f0f0;
+  padding: 0.3rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.story-background {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #07c160;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #555;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.members-list,
+.npcs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.member-item,
+.npc-item-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.member-item:hover,
+.npc-item-info:hover {
+  background: #e9ecef;
+}
+
+.member-item.creator {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+}
+
+.member-avatar,
+.npc-avatar-info {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.member-info,
+.npc-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name,
+.npc-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.2rem;
+}
+
+.member-role,
+.npc-profile {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.npc-profile {
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 </style>
