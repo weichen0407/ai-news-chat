@@ -79,23 +79,24 @@
                <p class="hint">点击上方按钮创建或加入群聊</p>
              </div>
 
-          <div
-            v-for="room in myRooms"
-            :key="room.id"
-            class="room-card"
-            :data-avatar="room.avatar || '聊'"
-            @click="enterRoom(room.id)"
-          >
-            <div class="room-content">
-              <div class="room-header">
-                <h3>{{ room.name }}</h3>
-                <span class="room-time">{{ formatDate(room.created_at) }}</span>
-              </div>
-              <div class="room-footer">
-                <div class="last-message">
-                  {{ room.last_message || "还没有消息" }}
+            <div
+              v-for="room in myRooms"
+              :key="room.id"
+              class="room-card"
+              :data-avatar="room.avatar || '聊'"
+              @click="enterRoom(room.id)"
+            >
+              <div class="room-content">
+                <div class="room-header">
+                  <h3>{{ room.name }}</h3>
+                  <span class="room-time">{{ formatDate(room.created_at) }}</span>
                 </div>
-                <span class="room-members">{{ formatMemberCount(room) }}</span>
+                <div class="room-footer">
+                  <div class="last-message">
+                    {{ room.last_message || "还没有消息" }}
+                  </div>
+                  <span class="room-members">{{ formatMemberCount(room) }}</span>
+                </div>
               </div>
             </div>
           </div>

@@ -4,13 +4,13 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       message: "测试API工作正常",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   } catch (error) {
     console.error("测试API错误:", error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
