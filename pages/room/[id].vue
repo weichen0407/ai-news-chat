@@ -10,6 +10,7 @@
         </div>
         <div class="header-actions">
           <button
+            v-if="isCreator"
             @click="toggleAutoMode"
             :class="['btn-auto', { active: isAutoMode }]"
             :title="isAutoMode ? '点击关闭自动对话' : '点击开启自动对话'"
@@ -638,11 +639,20 @@ const loadRoomInfo = async () => {
       npcs.value = response.npcs;
       members.value = response.members;
       isCreator.value = response.isCreator;
+      
+      // 加载自动模式状态
+      isAutoMode.value = response.room.auto_mode === 1;
+      if (isAutoMode.value && isCreator.value) {
+        startAutoMode();
+      }
+      
       console.log(
         "🔧 isCreator:",
         isCreator.value,
         "Room:",
-        roomInfo.value?.name
+        roomInfo.value?.name,
+        "AutoMode:",
+        isAutoMode.value
       );
 
       // 保存原始剧情背景
@@ -934,8 +944,18 @@ const totalMemberCount = computed(() => {
 const memberCount = computed(() => members.value?.length || 0);
 const npcCount = computed(() => npcs.value?.length || 0);
 
-const toggleAutoMode = () => {
+const toggleAutoMode = async () => {
   isAutoMode.value = !isAutoMode.value;
+
+  // 保存到数据库
+  try {
+    await $fetch(`/api/rooms/${roomId}/toggle-auto`, {
+      method: 'POST',
+      body: { autoMode: isAutoMode.value }
+    });
+  } catch (error) {
+    console.error('保存自动模式状态失败:', error);
+  }
 
   if (isAutoMode.value) {
     startAutoMode();

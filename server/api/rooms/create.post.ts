@@ -22,10 +22,19 @@ export default defineEventHandler(async (event) => {
   const roomId = generateRoomId()
   
   try {
+    // 如果是预设房间，使用jerry作为创建者
+    let creatorId = user.id
+    if (presetId) {
+      const jerryUser = db.prepare('SELECT id FROM users WHERE username = ?').get('jerry') as any
+      if (jerryUser) {
+        creatorId = jerryUser.id
+      }
+    }
+    
     // 创建房间（支持preset_id）
     db.prepare(
       'INSERT INTO rooms (id, name, description, event_background, dialogue_density, avatar, preset_id, creator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(roomId, name, description || '', eventBackground, dialogueDensity || 2, avatar || '聊', presetId || null, user.id)
+    ).run(roomId, name, description || '', eventBackground, dialogueDensity || 2, avatar || '聊', presetId || null, creatorId)
     
     // 添加NPC
     if (npcs && npcs.length > 0) {

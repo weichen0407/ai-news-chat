@@ -127,11 +127,18 @@ function initDB() {
       db.exec(`ALTER TABLE users ADD COLUMN avatar TEXT`)
     }
     
-    // 检查 rooms 表是否有 preset_id 字段
+    // 检查 rooms 表是否有 preset_id 和 auto_mode 字段
     const hasPresetId = roomsInfo.some((col: any) => col.name === 'preset_id')
+    const hasAutoMode = roomsInfo.some((col: any) => col.name === 'auto_mode')
+    
     if (!hasPresetId) {
       console.log('📝 添加 preset_id 字段...')
       db.exec(`ALTER TABLE rooms ADD COLUMN preset_id TEXT`)
+    }
+    
+    if (!hasAutoMode) {
+      console.log('📝 添加 auto_mode 字段...')
+      db.exec(`ALTER TABLE rooms ADD COLUMN auto_mode INTEGER DEFAULT 0`)
     }
     
     // 检查 room_members 表是否有 last_read_at 和 avatar 字段
