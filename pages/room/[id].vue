@@ -38,20 +38,28 @@
 
       <!-- 聊天消息区 -->
       <div class="messages-container" ref="messagesContainer">
-        <TypingMessage
+        <!-- 普通消息显示 -->
+        <div
           v-for="(msg, index) in messages"
           :key="index"
-          :content="msg.content"
-          :sender-name="msg.sender_name"
-          :avatar="msg.avatar || '/avatars/placeholder.svg'"
-          :time="formatTime(msg.created_at)"
-          :message-class="
+          :class="[
+            'message',
             msg.sender_type === 'user' && msg.sender_id === currentUserId
               ? 'mine'
               : 'other'
-          "
-          :delay="50"
-        />
+          ]"
+        >
+          <img
+            :src="msg.avatar || '/avatars/placeholder.svg'"
+            :alt="msg.sender_name"
+            class="avatar"
+          />
+          <div class="message-content">
+            <div class="sender-name">{{ msg.sender_name }}</div>
+            <div class="message-bubble">{{ msg.content }}</div>
+            <div class="message-time">{{ formatTime(msg.created_at) }}</div>
+          </div>
+        </div>
 
         <!-- 打字中提示 -->
         <div v-if="typingNPC" class="typing-indicator">
@@ -525,7 +533,6 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from "vue";
-import TypingMessage from "~/components/TypingMessage.vue";
 
 definePageMeta({
   middleware: "auth",

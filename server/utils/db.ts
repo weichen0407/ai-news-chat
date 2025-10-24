@@ -134,12 +134,19 @@ function initDB() {
       db.exec(`ALTER TABLE rooms ADD COLUMN preset_id TEXT`)
     }
     
-    // 检查 room_members 表是否有 last_read_at 字段
+    // 检查 room_members 表是否有 last_read_at 和 avatar 字段
     const membersInfo = db.pragma('table_info(room_members)')
     const hasLastReadAt = membersInfo.some((col: any) => col.name === 'last_read_at')
+    const hasMemberAvatar = membersInfo.some((col: any) => col.name === 'avatar')
+    
     if (!hasLastReadAt) {
       console.log('📝 添加 last_read_at 字段...')
       db.exec(`ALTER TABLE room_members ADD COLUMN last_read_at DATETIME`)
+    }
+    
+    if (!hasMemberAvatar) {
+      console.log('📝 添加 room_members.avatar 字段...')
+      db.exec(`ALTER TABLE room_members ADD COLUMN avatar TEXT`)
     }
     
     // 初始化jerry测试用户

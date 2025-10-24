@@ -232,6 +232,25 @@
 
             <div class="join-character-setup">
               <h3>设置你的角色</h3>
+              
+              <!-- 头像选择 -->
+              <div class="join-avatar-section">
+                <img
+                  :src="joinRoleAvatar || user?.avatar || '/avatars/placeholder.svg'"
+                  alt="角色头像"
+                  class="join-avatar-preview"
+                />
+                <label class="btn-upload-join-avatar">
+                  上传头像
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="uploadJoinAvatar"
+                    hidden
+                  />
+                </label>
+              </div>
+              
               <input
                 v-model="joinRoleName"
                 type="text"
@@ -330,6 +349,7 @@ const joinRoomId = ref("");
 const joinRoomIdLocked = computed(() => !!joinRoomId.value);
 const joinRoleName = ref("");
 const joinRoleProfile = ref("");
+const joinRoleAvatar = ref("");
 const joinError = ref("");
 
 onMounted(async () => {
@@ -409,6 +429,7 @@ const handleJoinRoom = async () => {
         roomId: targetRoomId,
         roleName: joinRoleName.value,
         roleProfile: joinRoleProfile.value,
+        avatar: joinRoleAvatar.value || user.value?.avatar, // 传递头像
       },
     });
 
@@ -417,14 +438,26 @@ const handleJoinRoom = async () => {
       joinRoomId.value = "";
       joinRoleName.value = "";
       joinRoleProfile.value = "";
+      joinRoleAvatar.value = "";
       await loadMyRooms();
-      enterRoom(targetRoomId); // 修复：使用保存的roomId
+      enterRoom(targetRoomId);
     } else {
       joinError.value = response.error;
     }
   } catch (error) {
     joinError.value = "加入失败，请重试";
   }
+};
+
+const uploadJoinAvatar = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    joinRoleAvatar.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
 };
 
 const uploadAvatar = async (event) => {
@@ -1202,6 +1235,39 @@ const getPresetNPCs = (roomId) => {
   font-size: 1rem;
   color: #333;
   margin: 0 0 1rem 0;
+}
+
+.join-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+}
+
+.join-avatar-preview {
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 2px solid #e5e5e5;
+}
+
+.btn-upload-join-avatar {
+  padding: 0.5rem 1rem;
+  background: #07c160;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.1s;
+}
+
+.btn-upload-join-avatar:active {
+  background: #06ad56;
 }
 
 .input,

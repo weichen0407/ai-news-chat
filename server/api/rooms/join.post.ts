@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   }
   
   const body = await readBody(event)
-  const { roomId, roleName, roleProfile } = body
+  const { roomId, roleName, roleProfile, avatar } = body
   
   if (!roomId) {
     return { success: false, error: '请提供房间ID' }
@@ -31,11 +31,11 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: '已经加入该房间' }
   }
   
-  // 加入房间
+  // 加入房间，保存头像
   try {
     db.prepare(
-      'INSERT INTO room_members (room_id, user_id, role_name, role_profile) VALUES (?, ?, ?, ?)'
-    ).run(roomId, user.id, roleName || null, roleProfile || null)
+      'INSERT INTO room_members (room_id, user_id, role_name, role_profile, avatar) VALUES (?, ?, ?, ?, ?)'
+    ).run(roomId, user.id, roleName || null, roleProfile || null, avatar || user.avatar || null)
     
     return { success: true }
   } catch (error) {
