@@ -611,6 +611,9 @@ onMounted(async () => {
   await loadRoomInfo();
   await loadMessages();
   scrollToBottom();
+  
+  // 标记为已读
+  await markAsRead();
 });
 
 const loadCurrentUser = async () => {
@@ -1076,6 +1079,16 @@ const generateNPCResponsesWithDelay = async () => {
 
 const toggleViewMode = () => {
   isFullscreen.value = !isFullscreen.value;
+};
+
+const markAsRead = async () => {
+  try {
+    await $fetch(`/api/rooms/${roomId}/mark-read`, {
+      method: 'POST'
+    });
+  } catch (error) {
+    console.error('标记已读失败:', error);
+  }
 };
 
 // 组件卸载时清理定时器

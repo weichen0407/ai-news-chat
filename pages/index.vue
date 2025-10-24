@@ -86,6 +86,11 @@
               :data-avatar="room.avatar || '聊'"
               @click="enterRoom(room.id)"
             >
+              <!-- 未读数量徽章 -->
+              <div v-if="room.unread_count && room.unread_count > 0" class="unread-badge">
+                {{ room.unread_count > 99 ? '99+' : room.unread_count }}
+              </div>
+              
               <div class="room-content">
                 <div class="room-header">
                   <h3>{{ room.name }}</h3>
@@ -823,6 +828,22 @@ const getPresetNPCs = (roomId) => {
   align-items: center;
   gap: 0.8rem;
   position: relative;
+}
+
+.unread-badge {
+  position: absolute;
+  top: 0.6rem;
+  left: 2.5rem;
+  background: #fa5151;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(250, 81, 81, 0.4);
+  z-index: 10;
 }
 
 .room-card:hover {

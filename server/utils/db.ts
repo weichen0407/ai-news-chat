@@ -134,6 +134,14 @@ function initDB() {
       db.exec(`ALTER TABLE rooms ADD COLUMN preset_id TEXT`)
     }
     
+    // 检查 room_members 表是否有 last_read_at 字段
+    const membersInfo = db.pragma('table_info(room_members)')
+    const hasLastReadAt = membersInfo.some((col: any) => col.name === 'last_read_at')
+    if (!hasLastReadAt) {
+      console.log('📝 添加 last_read_at 字段...')
+      db.exec(`ALTER TABLE room_members ADD COLUMN last_read_at DATETIME`)
+    }
+    
     // 初始化jerry测试用户（使用简单的哈希，实际部署时应该用bcrypt）
     const jerryUser = db.prepare('SELECT id FROM users WHERE username = ?').get('jerry')
     if (!jerryUser) {
