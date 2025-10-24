@@ -477,7 +477,7 @@ const formatMemberCount = (room) => {
 // 加入预设房间
 const joinPresetRoom = async (roomId) => {
   try {
-    // 直接创建预设房间
+    // 直接创建预设房间（包含NPC）
     const response = await $fetch("/api/rooms/create", {
       method: "POST",
       body: {
@@ -488,6 +488,7 @@ const joinPresetRoom = async (roomId) => {
         eventBackground: getPresetEventBackground(roomId),
         dialogueDensity: 3,
         avatar: presetRooms.value.find((r) => r.id === roomId)?.avatar || "💬",
+        npcs: getPresetNPCs(roomId), // 添加预设NPC
       },
     });
 
@@ -532,6 +533,38 @@ const getPresetEventBackground = (roomId) => {
       "某知名互联网公司内部，CEO突然宣布退休，引发了一场激烈的权力争夺战。各部门总监为了争夺CEO职位，展开了激烈的竞争。",
   };
   return backgrounds[roomId] || "这是一个预设的剧本房间，欢迎参与讨论！";
+};
+
+// 获取预设房间的NPC配置
+const getPresetNPCs = (roomId) => {
+  const npcConfigs = {
+    DRAMA1: [
+      { name: "王宝强", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop", profile: "被背叛的丈夫，愤怒、伤心，想要为自己和孩子讨回公道" },
+      { name: "马蓉", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop", profile: "被指控出轨的妻子，试图为自己辩解，声称被误解" },
+      { name: "宋喆", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop", profile: "王宝强的前经纪人，被指控与马蓉有不正当关系，保持沉默" }
+    ],
+    DRAMA2: [
+      { name: "特朗普", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop", profile: "现任总统，强硬保守派，坚持美国优先政策" },
+      { name: "拜登", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop", profile: "前副总统，温和派民主党人，主张团结与和解" },
+      { name: "CNN记者", avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop", profile: "中立媒体记者，负责采访和报道选举进展" }
+    ],
+    DRAMA3: [
+      { name: "甄嬛", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop", profile: "聪慧美丽的妃子，从天真烂漫到腹黑权谋的蜕变" },
+      { name: "华妃", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop", profile: "骄横跋扈的宠妃，依仗年羹尧的权势嚣张跋扈" },
+      { name: "皇后", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop", profile: "表面慈祥实则城府极深的后宫主宰者" }
+    ],
+    DRAMA4: [
+      { name: "美国队长", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop", profile: "坚持自由，反对被政府控制，相信英雄应该独立行动" },
+      { name: "钢铁侠", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop", profile: "支持接受政府监管，认为超级英雄需要制约" },
+      { name: "黑寡妇", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop", profile: "在两方之间摇摆不定，最终选择站队" }
+    ],
+    DRAMA5: [
+      { name: "技术总监", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop", profile: "技术派，擅长产品和研发，有野心但缺乏政治手腕" },
+      { name: "运营总监", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop", profile: "善于沟通协调，手腕圆滑，背后运作能力强" },
+      { name: "销售总监", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop", profile: "业绩出色，强势果断，在公司有很强的话语权" }
+    ]
+  };
+  return npcConfigs[roomId] || [];
 };
 </script>
 
