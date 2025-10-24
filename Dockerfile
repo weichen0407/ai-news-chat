@@ -13,16 +13,17 @@ WORKDIR /app
 
 # 复制package文件
 COPY package*.json ./
-COPY .npmrc ./
 
-# 安装依赖
-RUN npm ci --legacy-peer-deps --force --omit=optional
+# 清除缓存并强制重新安装（解决oxc-parser原生模块问题）
+RUN npm cache clean --force && \
+    rm -f package-lock.json && \
+    npm install --force --no-optional
 
 # 复制所有文件
 COPY . .
 
-# 构建应用
-RUN OXC_PARSER_DISABLE=1 npm run build
+# 构建应用（禁用oxc-parser）
+RUN npm run build
 
 # 创建数据目录
 RUN mkdir -p /app/data
@@ -30,7 +31,7 @@ RUN mkdir -p /app/data
 # 设置环境变量
 ENV HOST=0.0.0.0
 ENV NODE_ENV=production
-ENV OXC_PARSER_DISABLE=1
+ENV NUXT_TELEMETRY_DISABLED=1
 
 # 暴露端口（Railway会使用PORT环境变量）
 EXPOSE 3000
