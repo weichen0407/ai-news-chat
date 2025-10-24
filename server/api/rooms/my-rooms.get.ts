@@ -9,10 +9,10 @@ export default defineEventHandler(async (event) => {
   
   const db = getDB()
   
-  // 获取我加入的所有房间
+  // 获取我加入的所有房间（包含最新头像）
   const rooms = db.prepare(`
     SELECT 
-      r.id, r.name, r.description, r.created_at,
+      r.id, r.name, r.description, r.avatar, r.created_at,
       u.nickname as creator_name,
       (SELECT COUNT(DISTINCT user_id) FROM room_members WHERE room_id = r.id) as member_count,
       (SELECT COUNT(*) FROM npcs WHERE room_id = r.id) as npc_count,
