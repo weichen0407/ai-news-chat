@@ -18,7 +18,7 @@ RUN npm ci --legacy-peer-deps --force --omit=optional
 COPY . .
 
 # 构建应用
-RUN OXC_PARSER_DISABLE=1 NODE_OPTIONS="--no-wasm-code-gc" npm run build
+RUN OXC_PARSER_DISABLE=1 npm run build
 
 # 创建数据目录
 RUN mkdir -p /app/data
@@ -27,7 +27,6 @@ RUN mkdir -p /app/data
 ENV HOST=0.0.0.0
 ENV NODE_ENV=production
 ENV OXC_PARSER_DISABLE=1
-ENV NODE_OPTIONS="--no-wasm-code-gc"
 
 # 暴露端口（Railway会使用PORT环境变量）
 EXPOSE 3000

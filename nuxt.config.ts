@@ -41,7 +41,7 @@ export default defineNuxtConfig({
   // 启用内联样式
   experimental: {
     inlineSSRStyles: true,
-    payloadExtraction: false
+    payloadExtraction: false,
   },
 
   // 禁用oxc-parser
@@ -62,12 +62,16 @@ export default defineNuxtConfig({
       target: "esnext",
     },
     optimizeDeps: {
-      exclude: ['@oxc-parser/binding-darwin-arm64', '@oxc-parser/binding-darwin-universal', '@oxc-parser/binding-linux-x64-musl']
-    }
+      exclude: [
+        "@oxc-parser/binding-darwin-arm64",
+        "@oxc-parser/binding-darwin-universal",
+        "@oxc-parser/binding-linux-x64-musl",
+      ],
+    },
   },
 
   // 使用SWC替代oxc-parser
   build: {
-    transpile: ['@nuxt/kit']
-  }
+    transpile: ["@nuxt/kit"],
+  },
 });
