@@ -1,11 +1,14 @@
 # 使用Node.js 20标准镜像（非Alpine，支持更多原生模块）
 FROM node:20-slim
 
-# 安装构建工具（better-sqlite3需要）
+# 安装所有必要的构建工具
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
+    gcc \
+    libc6-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
@@ -23,10 +26,7 @@ RUN npm cache clean --force && \
 # 复制所有文件
 COPY . .
 
-# 强制删除oxc-parser（可选依赖，但有bug）
-RUN rm -rf node_modules/oxc-parser node_modules/.cache/oxc-parser || true
-
-# 构建应用
+# 构建应用（oxc-parser会从源代码编译）
 RUN npm run build
 
 # 创建数据目录
