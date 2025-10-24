@@ -9,12 +9,16 @@ WORKDIR /app
 
 # 复制package文件
 COPY package*.json ./
+COPY .npmrc ./
 
 # 安装依赖
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # 复制所有文件
 COPY . .
+
+# 准备Nuxt
+RUN npx nuxt prepare
 
 # 构建应用
 RUN npm run build
