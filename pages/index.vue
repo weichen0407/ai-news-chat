@@ -47,11 +47,37 @@
       <div class="tab-content">
          <!-- 我的群聊列表 -->
          <div v-if="activeTab === 'my-rooms'" class="room-list">
-           <div v-if="myRooms.length === 0" class="empty-state">
-             <div class="empty-icon">📭</div>
-             <p>还没有加入任何群聊</p>
-             <p class="hint">点击上方按钮创建或加入群聊</p>
+           <!-- 预设房间 -->
+           <div class="preset-rooms-section">
+             <h3 class="section-title">🎭 热门剧本</h3>
+             <div class="preset-rooms-grid">
+               <div
+                 v-for="room in presetRooms"
+                 :key="room.id"
+                 class="preset-room-card"
+                 :data-avatar="room.avatar"
+                 @click="joinPresetRoom(room.id)"
+               >
+                 <div class="preset-room-content">
+                   <h4>{{ room.name }}</h4>
+                   <p>{{ room.description }}</p>
+                   <div class="preset-room-meta">
+                     <span class="room-type">{{ room.type }}</span>
+                     <span class="room-players">{{ room.players }}人</span>
+                   </div>
+                 </div>
+               </div>
+             </div>
            </div>
+
+           <!-- 我的群聊 -->
+           <div class="my-rooms-section">
+             <h3 class="section-title">我的群聊</h3>
+             <div v-if="myRooms.length === 0" class="empty-state">
+               <div class="empty-icon">📭</div>
+               <p>还没有加入任何群聊</p>
+               <p class="hint">点击上方按钮创建或加入群聊</p>
+             </div>
 
           <div
             v-for="room in myRooms"
@@ -244,6 +270,50 @@ const myRooms = ref([]);
 const createdRooms = ref([]);
 const isFullscreen = ref(true); // 默认全屏（电脑模式）
 
+// 预设房间数据
+const presetRooms = ref([
+  {
+    id: 'DRAMA1',
+    name: '王宝强离婚风波',
+    description: '2016年娱乐圈最轰动的离婚事件',
+    avatar: '💔',
+    type: '娱乐',
+    players: 4
+  },
+  {
+    id: 'DRAMA2',
+    name: '特朗普vs拜登大选',
+    description: '2020年美国大选激烈对决',
+    avatar: '🗳️',
+    type: '政治',
+    players: 4
+  },
+  {
+    id: 'DRAMA3',
+    name: '甄嬛传后宫争宠',
+    description: '清朝后宫妃嫔争宠大戏',
+    avatar: '👑',
+    type: '古装',
+    players: 4
+  },
+  {
+    id: 'DRAMA4',
+    name: '复仇者联盟内战',
+    description: '超级英雄因理念分歧而分裂',
+    avatar: '⚔️',
+    type: '科幻',
+    players: 4
+  },
+  {
+    id: 'DRAMA5',
+    name: '甄嬛传现代版',
+    description: '现代职场版甄嬛传',
+    avatar: '💼',
+    type: '职场',
+    players: 4
+  }
+]);
+
 
 const showCreateRoomModal = ref(false);
 const showJoinRoomModal = ref(false);
@@ -398,6 +468,30 @@ const formatMemberCount = (room) => {
     return `${total}人（${npcCount}AI+${playerCount}玩家）`;
   }
   return `${total}人`;
+};
+
+// 加入预设房间
+const joinPresetRoom = async (roomId) => {
+  try {
+    const response = await $fetch('/api/rooms/join', {
+      method: 'POST',
+      body: {
+        roomId: roomId,
+        roleName: '',
+        roleProfile: ''
+      }
+    });
+    
+    if (response.success) {
+      await loadMyRooms();
+      enterRoom(roomId);
+    } else {
+      alert('加入失败: ' + response.error);
+    }
+  } catch (error) {
+    console.error('加入预设房间失败:', error);
+    alert('加入失败，请重试');
+  }
 };
 
 </script>
@@ -558,6 +652,94 @@ const formatMemberCount = (room) => {
 .room-list {
   display: flex;
   flex-direction: column;
+}
+
+.section-title {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+  padding: 0 1rem;
+}
+
+.preset-rooms-section {
+  margin-bottom: 2rem;
+}
+
+.preset-rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.8rem;
+  padding: 0 1rem;
+  margin-bottom: 1rem;
+}
+
+.preset-room-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #e5e5e5;
+  position: relative;
+  overflow: hidden;
+}
+
+.preset-room-card::before {
+  content: attr(data-avatar);
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 1.5rem;
+  opacity: 0.3;
+}
+
+.preset-room-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #07c160;
+}
+
+.preset-room-content h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: #333;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.preset-room-content p {
+  margin: 0 0 0.8rem 0;
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.preset-room-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.room-type {
+  background: #f0f0f0;
+  color: #666;
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+}
+
+.room-players {
+  color: #999;
+}
+
+.my-rooms-section {
+  padding-top: 1rem;
+  border-top: 1px solid #f0f0f0;
 }
 
 
