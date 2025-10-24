@@ -38,20 +38,10 @@ export default defineNuxtConfig({
 
   css: ["~/assets/css/main.css"],
 
-  // 优化CSS加载
-  vite: {
-    css: {
-      preprocessorOptions: {
-        css: {
-          additionalData: "",
-        },
-      },
-    },
-  },
-
   // 启用内联样式
   experimental: {
     inlineSSRStyles: true,
+    payloadExtraction: false
   },
 
   // 禁用oxc-parser
@@ -71,5 +61,13 @@ export default defineNuxtConfig({
     esbuild: {
       target: "esnext",
     },
+    optimizeDeps: {
+      exclude: ['@oxc-parser/binding-darwin-arm64', '@oxc-parser/binding-darwin-universal', '@oxc-parser/binding-linux-x64-musl']
+    }
   },
+
+  // 使用SWC替代oxc-parser
+  build: {
+    transpile: ['@nuxt/kit']
+  }
 });
