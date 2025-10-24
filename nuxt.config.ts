@@ -25,9 +25,16 @@ export default defineNuxtConfig({
       style: [
         {
           children: `
-            body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            html, body { 
+              margin: 0; 
+              padding: 0; 
+              height: 100vh;
+              width: 100vw;
+              overflow: hidden;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            }
             * { box-sizing: border-box; }
-            .viewport { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f0f2f5; }
+            #__nuxt { height: 100vh; width: 100vw; overflow: hidden; }
             [v-cloak] { display: none; }
           `,
           type: "text/css",

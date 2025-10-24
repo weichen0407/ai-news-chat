@@ -1099,12 +1099,14 @@ onUnmounted(() => {
 
 <style scoped>
 .viewport {
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
   background: #2c2c2c;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
+  padding: 0;
+  overflow: hidden;
 }
 
 .chat-container {
@@ -1124,8 +1126,6 @@ onUnmounted(() => {
   height: 100vh;
   border-radius: 0;
   box-shadow: none;
-  transform: scale(0.85);
-  transform-origin: center center;
 }
 
 @media (max-width: 768px) {
