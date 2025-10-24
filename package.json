@@ -13,6 +13,7 @@
     "preview": "nuxt preview"
   },
   "dependencies": {
+    "@oxc-parser/binding-darwin-arm64": "^0.95.0",
     "better-sqlite3": "^9.6.0",
     "nuxt": "^3.13.0",
     "vue": "^3.4.0",
