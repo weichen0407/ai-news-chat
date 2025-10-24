@@ -477,25 +477,40 @@ const formatMemberCount = (room) => {
 // 加入预设房间
 const joinPresetRoom = async (roomId) => {
   try {
-    const response = await $fetch("/api/rooms/join", {
+    // 直接创建预设房间
+    const response = await $fetch("/api/rooms/create", {
       method: "POST",
       body: {
-        roomId: roomId,
-        roleName: "",
-        roleProfile: "",
+        name: presetRooms.value.find(r => r.id === roomId)?.name || "预设房间",
+        description: presetRooms.value.find(r => r.id === roomId)?.description || "",
+        eventBackground: getPresetEventBackground(roomId),
+        dialogueDensity: 3,
+        avatar: presetRooms.value.find(r => r.id === roomId)?.avatar || "💬"
       },
     });
 
     if (response.success) {
       await loadMyRooms();
-      enterRoom(roomId);
+      enterRoom(response.roomId);
     } else {
-      alert("加入失败: " + response.error);
+      alert("创建失败: " + response.error);
     }
   } catch (error) {
-    console.error("加入预设房间失败:", error);
-    alert("加入失败，请重试");
+    console.error("创建预设房间失败:", error);
+    alert("创建失败，请重试");
   }
+};
+
+// 获取预设房间的事件背景
+const getPresetEventBackground = (roomId) => {
+  const backgrounds = {
+    "DRAMA1": "2016年8月14日凌晨，王宝强在微博发布离婚声明，指控妻子马蓉与经纪人宋喆存在婚外不正当两性关系，严重伤害了婚姻、破坏了家庭。这一声明瞬间引爆网络，成为当年最轰动的娱乐事件。",
+    "DRAMA2": "2020年美国大选是历史上最激烈和争议的总统选举之一。现任总统特朗普寻求连任，而前副总统拜登代表民主党挑战。",
+    "DRAMA3": "雍正年间，后宫佳丽三千，争宠不断。甄嬛初入宫时天真烂漫，但很快被卷入后宫的权力斗争。",
+    "DRAMA4": "《美国队长3：内战》事件。由于超级英雄的行动造成了大量平民伤亡，联合国要求所有超级英雄签署《索科维亚协议》，接受政府监管。",
+    "DRAMA5": "某知名互联网公司内部，CEO突然宣布退休，引发了一场激烈的权力争夺战。各部门总监为了争夺CEO职位，展开了激烈的竞争。"
+  };
+  return backgrounds[roomId] || "这是一个预设的剧本房间，欢迎参与讨论！";
 };
 </script>
 
