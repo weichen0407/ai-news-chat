@@ -10,7 +10,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { roomId, originalBackground, currentBackground, recentMessages } = body;
+  const { roomId, originalBackground, currentBackground, recentMessages } =
+    body;
 
   if (!roomId) {
     return { success: false, error: "缺少房间ID" };

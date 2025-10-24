@@ -1,381 +1,409 @@
 <template>
   <div class="viewport">
     <div :class="['app-container', { fullscreen: isFullscreen }]">
-    <!-- 顶部导航栏 -->
-    <div class="top-bar">
-      <h1 class="app-title">💬 AI聊天模拟器</h1>
-      <div class="top-actions">
-        <button @click="showCreateRoomModal = true" class="btn-create">
-          ➕ 创建群聊
+      <!-- 顶部导航栏 -->
+      <div class="top-bar">
+        <h1 class="app-title">💬 AI聊天模拟器</h1>
+        <div class="top-actions">
+          <button @click="showCreateRoomModal = true" class="btn-create">
+            ➕ 创建群聊
+          </button>
+          <button @click="showJoinRoomModal = true" class="btn-join">
+            🔍 加入群聊
+          </button>
+          <button
+            @click="toggleViewMode"
+            class="btn-view-mode"
+            :title="isFullscreen ? '手机模式' : '全屏模式'"
+          >
+            {{ isFullscreen ? "📱" : "🖥️" }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab导航 -->
+      <div class="tabs">
+        <button
+          :class="['tab-btn', { active: activeTab === 'my-rooms' }]"
+          @click="activeTab = 'my-rooms'"
+        >
+          我的群聊
         </button>
-        <button @click="showJoinRoomModal = true" class="btn-join">
-          🔍 加入群聊
+        <button
+          :class="['tab-btn', { active: activeTab === 'created' }]"
+          @click="activeTab = 'created'"
+        >
+          我创建的
         </button>
-        <button @click="toggleViewMode" class="btn-view-mode" :title="isFullscreen ? '手机模式' : '全屏模式'">
-          {{ isFullscreen ? '📱' : '🖥️' }}
+        <button
+          :class="['tab-btn', { active: activeTab === 'profile' }]"
+          @click="activeTab = 'profile'"
+        >
+          我的
         </button>
       </div>
-    </div>
 
-    <!-- Tab导航 -->
-    <div class="tabs">
-      <button
-        :class="['tab-btn', { active: activeTab === 'my-rooms' }]"
-        @click="activeTab = 'my-rooms'"
-      >
-        我的群聊
-      </button>
-      <button
-        :class="['tab-btn', { active: activeTab === 'created' }]"
-        @click="activeTab = 'created'"
-      >
-        我创建的
-      </button>
-      <button
-        :class="['tab-btn', { active: activeTab === 'profile' }]"
-        @click="activeTab = 'profile'"
-      >
-        我的
-      </button>
-    </div>
+      <!-- Tab内容 -->
+      <div class="tab-content">
+        <!-- 我的群聊列表 -->
+        <div v-if="activeTab === 'my-rooms'" class="room-list">
+          <div v-if="myRooms.length === 0" class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>还没有加入任何群聊</p>
+            <p class="hint">点击上方按钮创建或加入群聊</p>
+          </div>
 
-    <!-- Tab内容 -->
-    <div class="tab-content">
-      <!-- 我的群聊列表 -->
-      <div v-if="activeTab === 'my-rooms'" class="room-list">
-        <div v-if="myRooms.length === 0" class="empty-state">
-          <div class="empty-icon">📭</div>
-          <p>还没有加入任何群聊</p>
-          <p class="hint">点击上方按钮创建或加入群聊</p>
-        </div>
-        
-        <div
-          v-for="room in myRooms"
-          :key="room.id"
-          class="room-card"
-          :data-avatar="room.avatar || '聊'"
-          @click="enterRoom(room.id)"
-        >
-          <div class="room-content">
-            <div class="room-header">
-              <h3>{{ room.name }}</h3>
-              <span class="room-time">{{ formatDate(room.created_at) }}</span>
-            </div>
-            <div class="room-footer">
-              <div class="last-message">
-                {{ room.last_message || '还没有消息' }}
+          <div
+            v-for="room in myRooms"
+            :key="room.id"
+            class="room-card"
+            :data-avatar="room.avatar || '聊'"
+            @click="enterRoom(room.id)"
+          >
+            <div class="room-content">
+              <div class="room-header">
+                <h3>{{ room.name }}</h3>
+                <span class="room-time">{{ formatDate(room.created_at) }}</span>
               </div>
-              <span class="room-members">{{ formatMemberCount(room) }}</span>
+              <div class="room-footer">
+                <div class="last-message">
+                  {{ room.last_message || "还没有消息" }}
+                </div>
+                <span class="room-members">{{ formatMemberCount(room) }}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- 我创建的群聊 -->
-      <div v-if="activeTab === 'created'" class="room-list">
-        <div v-if="createdRooms.length === 0" class="empty-state">
-          <div class="empty-icon">✨</div>
-          <p>还没有创建任何群聊</p>
-          <p class="hint">点击上方"创建群聊"开始创作</p>
-        </div>
-        
+        <!-- 我创建的群聊 -->
+        <div v-if="activeTab === 'created'" class="room-list">
+          <div v-if="createdRooms.length === 0" class="empty-state">
+            <div class="empty-icon">✨</div>
+            <p>还没有创建任何群聊</p>
+            <p class="hint">点击上方"创建群聊"开始创作</p>
+          </div>
+
           <div
             v-for="room in createdRooms"
             :key="room.id"
             class="room-card-created"
           >
-          <div class="room-header">
-            <h3>{{ room.name }}</h3>
-            <span class="creator-badge">创建者</span>
+            <div class="room-header">
+              <h3>{{ room.name }}</h3>
+              <span class="creator-badge">创建者</span>
+            </div>
+            <p class="room-id">房间ID：{{ room.id }}</p>
+            <p class="room-desc">{{ room.description || "暂无描述" }}</p>
+            <div class="room-footer">
+              <span>{{ room.member_count }}名成员</span>
+              <span>{{ room.message_count }}条消息</span>
+            </div>
+            <div class="room-actions">
+              <button @click="enterRoom(room.id)" class="btn-enter">
+                💬 进入聊天室
+              </button>
+              <button @click="editRoom(room.id)" class="btn-edit">
+                ⚙️ 编辑设置
+              </button>
+            </div>
           </div>
-          <p class="room-id">房间ID：{{ room.id }}</p>
-          <p class="room-desc">{{ room.description || '暂无描述' }}</p>
-          <div class="room-footer">
-            <span>{{ room.member_count }}名成员</span>
-            <span>{{ room.message_count }}条消息</span>
-          </div>
-          <div class="room-actions">
-            <button @click="enterRoom(room.id)" class="btn-enter">
-              💬 进入聊天室
-            </button>
-            <button @click="editRoom(room.id)" class="btn-edit">
-              ⚙️ 编辑设置
-            </button>
+        </div>
+
+        <!-- 个人信息 -->
+        <div v-if="activeTab === 'profile'" class="profile-section">
+          <div class="profile-card">
+            <div class="avatar-section">
+              <img
+                :src="user?.avatar || '/avatars/placeholder.svg'"
+                alt="头像"
+                class="profile-avatar"
+              />
+              <label class="change-avatar-btn">
+                更换头像
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="uploadAvatar"
+                  hidden
+                />
+              </label>
+            </div>
+
+            <div class="profile-info">
+              <div class="info-item">
+                <label>用户名</label>
+                <div class="info-value">{{ user?.username }}</div>
+              </div>
+
+              <div class="info-item">
+                <label>昵称</label>
+                <div class="info-value">{{ user?.nickname }}</div>
+              </div>
+
+              <div class="info-item">
+                <label>加入时间</label>
+                <div class="info-value">{{ formatDate(user?.created_at) }}</div>
+              </div>
+            </div>
+
+            <button @click="handleLogout" class="btn-logout">退出登录</button>
           </div>
         </div>
       </div>
 
-      <!-- 个人信息 -->
-      <div v-if="activeTab === 'profile'" class="profile-section">
-        <div class="profile-card">
-          <div class="avatar-section">
-            <img :src="user?.avatar || '/avatars/placeholder.svg'" alt="头像" class="profile-avatar" />
-            <label class="change-avatar-btn">
-              更换头像
-              <input type="file" accept="image/*" @change="uploadAvatar" hidden />
-            </label>
-          </div>
-          
-          <div class="profile-info">
-            <div class="info-item">
-              <label>用户名</label>
-              <div class="info-value">{{ user?.username }}</div>
-            </div>
-            
-            <div class="info-item">
-              <label>昵称</label>
-              <div class="info-value">{{ user?.nickname }}</div>
-            </div>
-            
-            <div class="info-item">
-              <label>加入时间</label>
-              <div class="info-value">{{ formatDate(user?.created_at) }}</div>
-            </div>
-          </div>
-          
-          <button @click="handleLogout" class="btn-logout">
-            退出登录
-          </button>
+      <!-- 创建房间弹窗 -->
+      <div
+        v-if="showCreateRoomModal"
+        class="modal-overlay"
+        @click="showCreateRoomModal = false"
+      >
+        <div class="modal-content" @click.stop>
+          <h2>创建群聊</h2>
+          <p class="modal-subtitle">设置剧情和NPC角色</p>
+
+          <CreateRoomForm
+            @created="handleRoomCreated"
+            @cancel="showCreateRoomModal = false"
+          />
         </div>
       </div>
-    </div>
 
-    <!-- 创建房间弹窗 -->
-    <div v-if="showCreateRoomModal" class="modal-overlay" @click="showCreateRoomModal = false">
-      <div class="modal-content" @click.stop>
-        <h2>创建群聊</h2>
-        <p class="modal-subtitle">设置剧情和NPC角色</p>
-        
-        <CreateRoomForm @created="handleRoomCreated" @cancel="showCreateRoomModal = false" />
-      </div>
-    </div>
+      <!-- 加入房间弹窗 -->
+      <div
+        v-if="showJoinRoomModal"
+        class="modal-overlay"
+        @click="showJoinRoomModal = false"
+      >
+        <div class="modal-content small" @click.stop>
+          <h2>{{ joinRoomId ? "设置人设" : "加入群聊" }}</h2>
+          <p class="modal-subtitle">
+            {{ joinRoomId ? "选择你的角色并设置人设" : "输入群聊ID即可加入" }}
+          </p>
 
-    <!-- 加入房间弹窗 -->
-    <div v-if="showJoinRoomModal" class="modal-overlay" @click="showJoinRoomModal = false">
-      <div class="modal-content small" @click.stop>
-        <h2>{{ joinRoomId ? '设置人设' : '加入群聊' }}</h2>
-        <p class="modal-subtitle">{{ joinRoomId ? '选择你的角色并设置人设' : '输入群聊ID即可加入' }}</p>
-        
-        <div class="join-form">
-          <div class="form-group">
-            <label>房间ID</label>
-            <input
-              v-if="!joinRoomIdLocked"
-              v-model="joinRoomId"
-              type="text"
-              placeholder="请输入6位房间ID"
-              class="input"
-              maxlength="6"
-            />
-            <div v-else class="input-readonly">{{ joinRoomId }}</div>
-          </div>
-          
-          <div class="join-character-setup">
-            <h3>设置你的角色</h3>
-            <input
-              v-model="joinRoleName"
-              type="text"
-              placeholder="角色名称（可选）"
-              class="input"
-            />
-            <textarea
-              v-model="joinRoleProfile"
-              placeholder="角色人设（可选）"
-              rows="3"
-              class="textarea"
-            ></textarea>
-          </div>
-          
-          <div v-if="joinError" class="error-msg">{{ joinError }}</div>
-          
-          <div class="modal-actions">
-            <button @click="showJoinRoomModal = false" class="btn-cancel">
-              取消
-            </button>
-            <button @click="handleJoinRoom" class="btn-confirm" :disabled="!joinRoomId">
-              加入
-            </button>
+          <div class="join-form">
+            <div class="form-group">
+              <label>房间ID</label>
+              <input
+                v-if="!joinRoomIdLocked"
+                v-model="joinRoomId"
+                type="text"
+                placeholder="请输入6位房间ID"
+                class="input"
+                maxlength="6"
+              />
+              <div v-else class="input-readonly">{{ joinRoomId }}</div>
+            </div>
+
+            <div class="join-character-setup">
+              <h3>设置你的角色</h3>
+              <input
+                v-model="joinRoleName"
+                type="text"
+                placeholder="角色名称（可选）"
+                class="input"
+              />
+              <textarea
+                v-model="joinRoleProfile"
+                placeholder="角色人设（可选）"
+                rows="3"
+                class="textarea"
+              ></textarea>
+            </div>
+
+            <div v-if="joinError" class="error-msg">{{ joinError }}</div>
+
+            <div class="modal-actions">
+              <button @click="showJoinRoomModal = false" class="btn-cancel">
+                取消
+              </button>
+              <button
+                @click="handleJoinRoom"
+                class="btn-confirm"
+                :disabled="!joinRoomId"
+              >
+                加入
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from "vue";
 
 definePageMeta({
-  middleware: 'auth'
-})
+  middleware: "auth",
+});
 
-const activeTab = ref('my-rooms')
-const user = ref(null)
-const myRooms = ref([])
-const createdRooms = ref([])
-const isFullscreen = ref(true) // 默认全屏（电脑模式）
+const activeTab = ref("my-rooms");
+const user = ref(null);
+const myRooms = ref([]);
+const createdRooms = ref([]);
+const isFullscreen = ref(true); // 默认全屏（电脑模式）
 
-const showCreateRoomModal = ref(false)
-const showJoinRoomModal = ref(false)
-const joinRoomId = ref('')
-const joinRoomIdLocked = computed(() => !!joinRoomId.value)
-const joinRoleName = ref('')
-const joinRoleProfile = ref('')
-const joinError = ref('')
+const showCreateRoomModal = ref(false);
+const showJoinRoomModal = ref(false);
+const joinRoomId = ref("");
+const joinRoomIdLocked = computed(() => !!joinRoomId.value);
+const joinRoleName = ref("");
+const joinRoleProfile = ref("");
+const joinError = ref("");
 
 onMounted(async () => {
-  await loadUser()
-  await loadMyRooms()
-  await loadCreatedRooms()
-})
+  await loadUser();
+  await loadMyRooms();
+  await loadCreatedRooms();
+});
 
 const loadUser = async () => {
   try {
-    const response = await $fetch('/api/auth/me')
+    const response = await $fetch("/api/auth/me");
     if (response.success) {
-      user.value = response.user
+      user.value = response.user;
     } else {
-      navigateTo('/login')
+      navigateTo("/login");
     }
   } catch (error) {
-    navigateTo('/login')
+    navigateTo("/login");
   }
-}
+};
 
 const loadMyRooms = async () => {
   try {
-    const response = await $fetch('/api/rooms/my-rooms')
+    const response = await $fetch("/api/rooms/my-rooms");
     if (response.success) {
-      myRooms.value = response.rooms
+      myRooms.value = response.rooms;
     }
   } catch (error) {
-    console.error('加载房间列表失败:', error)
+    console.error("加载房间列表失败:", error);
   }
-}
+};
 
 const loadCreatedRooms = async () => {
   try {
-    const response = await $fetch('/api/rooms/my-created')
+    const response = await $fetch("/api/rooms/my-created");
     if (response.success) {
-      createdRooms.value = response.rooms
+      createdRooms.value = response.rooms;
     }
   } catch (error) {
-    console.error('加载创建的房间失败:', error)
+    console.error("加载创建的房间失败:", error);
   }
-}
+};
 
 const enterRoom = (roomId) => {
-  navigateTo(`/room/${roomId}`)
-}
+  navigateTo(`/room/${roomId}`);
+};
 
 const editRoom = (roomId) => {
-  navigateTo(`/room/${roomId}/edit`)
-}
+  navigateTo(`/room/${roomId}/edit`);
+};
 
 const handleRoomCreated = async (roomId) => {
-  showCreateRoomModal.value = false
-  await loadMyRooms()
-  await loadCreatedRooms()
-  
+  showCreateRoomModal.value = false;
+  await loadMyRooms();
+  await loadCreatedRooms();
+
   // 群主创建后需要设置自己的人设才能进入
-  alert('群聊创建成功！请设置你的角色人设')
-  showJoinRoomModal.value = true
-  joinRoomId.value = roomId
-}
+  alert("群聊创建成功！请设置你的角色人设");
+  showJoinRoomModal.value = true;
+  joinRoomId.value = roomId;
+};
 
 const handleJoinRoom = async () => {
-  joinError.value = ''
-  
+  joinError.value = "";
+
   if (!joinRoomId.value) {
-    joinError.value = '请输入房间ID'
-    return
+    joinError.value = "请输入房间ID";
+    return;
   }
-  
-  const targetRoomId = joinRoomId.value.toUpperCase()
-  
+
+  const targetRoomId = joinRoomId.value.toUpperCase();
+
   try {
-    const response = await $fetch('/api/rooms/join', {
-      method: 'POST',
+    const response = await $fetch("/api/rooms/join", {
+      method: "POST",
       body: {
         roomId: targetRoomId,
         roleName: joinRoleName.value,
-        roleProfile: joinRoleProfile.value
-      }
-    })
-    
+        roleProfile: joinRoleProfile.value,
+      },
+    });
+
     if (response.success) {
-      showJoinRoomModal.value = false
-      joinRoomId.value = ''
-      joinRoleName.value = ''
-      joinRoleProfile.value = ''
-      await loadMyRooms()
-      enterRoom(targetRoomId) // 修复：使用保存的roomId
+      showJoinRoomModal.value = false;
+      joinRoomId.value = "";
+      joinRoleName.value = "";
+      joinRoleProfile.value = "";
+      await loadMyRooms();
+      enterRoom(targetRoomId); // 修复：使用保存的roomId
     } else {
-      joinError.value = response.error
+      joinError.value = response.error;
     }
   } catch (error) {
-    joinError.value = '加入失败，请重试'
+    joinError.value = "加入失败，请重试";
   }
-}
+};
 
 const uploadAvatar = async (event) => {
-  const file = event.target.files[0]
+  const file = event.target.files[0];
   if (file) {
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = async (e) => {
-      const avatarData = e.target.result
-      
+      const avatarData = e.target.result;
+
       try {
-        const response = await $fetch('/api/user/update-avatar', {
-          method: 'POST',
-          body: { avatar: avatarData }
-        })
-        
+        const response = await $fetch("/api/user/update-avatar", {
+          method: "POST",
+          body: { avatar: avatarData },
+        });
+
         if (response.success) {
-          user.value.avatar = avatarData
-          alert('头像更新成功！')
+          user.value.avatar = avatarData;
+          alert("头像更新成功！");
         } else {
-          alert('头像更新失败：' + response.error)
+          alert("头像更新失败：" + response.error);
         }
       } catch (error) {
-        alert('上传失败，请重试')
+        alert("上传失败，请重试");
       }
-    }
-    reader.readAsDataURL(file)
+    };
+    reader.readAsDataURL(file);
   }
-}
+};
 
 const handleLogout = async () => {
-  await $fetch('/api/auth/logout', { method: 'POST' })
-  navigateTo('/login')
-}
+  await $fetch("/api/auth/logout", { method: "POST" });
+  navigateTo("/login");
+};
 
 const toggleViewMode = () => {
-  isFullscreen.value = !isFullscreen.value
-}
+  isFullscreen.value = !isFullscreen.value;
+};
 
 const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('zh-CN')
-}
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("zh-CN");
+};
 
 const formatMemberCount = (room) => {
-  const npcCount = room.npc_count || 0
-  const playerCount = room.member_count || 0
-  const total = npcCount + playerCount
-  
+  const npcCount = room.npc_count || 0;
+  const playerCount = room.member_count || 0;
+  const total = npcCount + playerCount;
+
   if (npcCount > 0) {
-    return `${total}人（${npcCount}AI+${playerCount}玩家）`
+    return `${total}人（${npcCount}AI+${playerCount}玩家）`;
   }
-  return `${total}人`
-}
+  return `${total}人`;
+};
 </script>
 
 <style scoped>
 .viewport {
   min-height: 100vh;
-  background: #2C2C2C;
+  background: #2c2c2c;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -385,19 +413,17 @@ const formatMemberCount = (room) => {
 .app-container {
   width: 100%;
   max-width: 420px;
-  height: 95vh;
-  max-height: 900px;
-  background: #EDEDED;
+  height: 100vh;
+  background: #ededed;
   display: flex;
   flex-direction: column;
-  border-radius: 16px;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: none;
 }
 
 .app-container.fullscreen {
   max-width: 100%;
-  max-height: 100%;
   height: 100vh;
   border-radius: 0;
   box-shadow: none;
@@ -407,7 +433,7 @@ const formatMemberCount = (room) => {
   .viewport {
     padding: 0;
   }
-  
+
   .app-container {
     max-width: 100%;
     height: 100vh;
@@ -418,12 +444,12 @@ const formatMemberCount = (room) => {
 
 .top-bar {
   background: white;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #E5E5E5;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #e5e5e5;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .app-title {
@@ -450,22 +476,22 @@ const formatMemberCount = (room) => {
 }
 
 .btn-create {
-  background: #07C160;
+  background: #07c160;
   color: white;
 }
 
 .btn-join {
   background: white;
-  color: #576B95;
-  border: 1px solid #576B95;
+  color: #576b95;
+  border: 1px solid #576b95;
 }
 
 .btn-create:active {
-  background: #06AD56;
+  background: #06ad56;
 }
 
 .btn-join:active {
-  background: #F0F0F0;
+  background: #f0f0f0;
 }
 
 .btn-view-mode {
@@ -479,7 +505,7 @@ const formatMemberCount = (room) => {
 }
 
 .btn-view-mode:hover {
-  background: #F0F0F0;
+  background: #f0f0f0;
 }
 
 .btn-view-mode:active {
@@ -489,13 +515,13 @@ const formatMemberCount = (room) => {
 .tabs {
   background: white;
   display: flex;
-  border-bottom: 1px solid #E5E5E5;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  border-bottom: 1px solid #e5e5e5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .tab-btn {
   flex: 1;
-  padding: 1rem;
+  padding: 0.8rem;
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
@@ -512,12 +538,12 @@ const formatMemberCount = (room) => {
 
 .tab-btn.active {
   color: #000;
-  border-bottom-color: #07C160;
+  border-bottom-color: #07c160;
   font-weight: 600;
 }
 
 .tab-btn:hover {
-  color: #07C160;
+  color: #07c160;
   background: rgba(7, 193, 96, 0.05);
 }
 
@@ -534,10 +560,10 @@ const formatMemberCount = (room) => {
 
 .room-card {
   background: white;
-  padding: 1rem 1rem;
+  padding: 0.8rem 1rem;
   cursor: pointer;
   transition: all 0.2s;
-  border-bottom: 1px solid #E5E5E5;
+  border-bottom: 1px solid #e5e5e5;
   display: flex;
   align-items: center;
   gap: 0.8rem;
@@ -545,29 +571,29 @@ const formatMemberCount = (room) => {
 }
 
 .room-card:hover {
-  background: #F8F8F8;
+  background: #f8f8f8;
 }
 
 .room-card:active {
-  background: #F0F0F0;
+  background: #f0f0f0;
 }
 
 .room-card.created {
-  background: #F8F8F8;
+  background: #f8f8f8;
 }
 
 .room-card::before {
   content: attr(data-avatar);
-  width: 50px;
-  height: 50px;
-  background: linear-gradient(135deg, #07C160 0%, #05A850 100%);
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #07c160 0%, #05a850 100%);
+  border-radius: 6px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -602,7 +628,7 @@ const formatMemberCount = (room) => {
 }
 
 .room-members {
-  background: #07C160;
+  background: #07c160;
   color: white;
   padding: 0.15rem 0.5rem;
   border-radius: 10px;
@@ -611,7 +637,7 @@ const formatMemberCount = (room) => {
 }
 
 .creator-badge {
-  background: #576B95;
+  background: #576b95;
   color: white;
   padding: 0.15rem 0.5rem;
   border-radius: 10px;
@@ -620,7 +646,7 @@ const formatMemberCount = (room) => {
 }
 
 .room-id {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   color: #999;
   font-size: 0.8rem;
   margin: 0.2rem 0;
@@ -669,21 +695,21 @@ const formatMemberCount = (room) => {
 }
 
 .btn-enter {
-  background: #07C160;
+  background: #07c160;
   color: white;
 }
 
 .btn-enter:active {
-  background: #06AD56;
+  background: #06ad56;
 }
 
 .btn-edit {
-  background: #F0F0F0;
+  background: #f0f0f0;
   color: #000;
 }
 
 .btn-edit:active {
-  background: #E0E0E0;
+  background: #e0e0e0;
 }
 
 .room-card-created {
@@ -691,15 +717,15 @@ const formatMemberCount = (room) => {
   padding: 1.2rem;
   margin-bottom: 1rem;
   border-radius: 8px;
-  border: 1px solid #E5E5E5;
+  border: 1px solid #e5e5e5;
   margin: 0 1rem 1rem 1rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.2s;
 }
 
 .room-card-created:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  border-color: #07C160;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: #07c160;
 }
 
 .room-card-created .room-header {
@@ -717,7 +743,7 @@ const formatMemberCount = (room) => {
 }
 
 .room-card-created .room-id {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   color: #999;
   font-size: 0.85rem;
   margin: 0.3rem 0 0.5rem 0;
@@ -738,7 +764,7 @@ const formatMemberCount = (room) => {
   color: #999;
   margin: 0.8rem 0;
   padding-top: 0.8rem;
-  border-top: 1px solid #F0F0F0;
+  border-top: 1px solid #f0f0f0;
 }
 
 .empty-state {
@@ -776,7 +802,7 @@ const formatMemberCount = (room) => {
   padding: 2rem 1.5rem;
   border-radius: 8px;
   margin: 1rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .avatar-section {
@@ -788,15 +814,15 @@ const formatMemberCount = (room) => {
 }
 
 .profile-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
   object-fit: cover;
 }
 
 .change-avatar-btn {
   padding: 0.4rem 0.8rem;
-  background: #07C160;
+  background: #07c160;
   color: white;
   border-radius: 4px;
   cursor: pointer;
@@ -804,7 +830,7 @@ const formatMemberCount = (room) => {
 }
 
 .change-avatar-btn:active {
-  background: #06AD56;
+  background: #06ad56;
 }
 
 .profile-info {
@@ -833,7 +859,7 @@ const formatMemberCount = (room) => {
 .btn-logout {
   width: 100%;
   padding: 0.8rem;
-  background: #FA5151;
+  background: #fa5151;
   color: white;
   border: none;
   border-radius: 4px;
@@ -844,7 +870,7 @@ const formatMemberCount = (room) => {
 }
 
 .btn-logout:active {
-  background: #E84B4B;
+  background: #e84b4b;
 }
 
 .modal-overlay {
@@ -853,7 +879,7 @@ const formatMemberCount = (room) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -904,7 +930,7 @@ const formatMemberCount = (room) => {
 .textarea {
   width: 100%;
   padding: 0.7rem;
-  border: 1px solid #D9D9D9;
+  border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 0.95rem;
   font-family: inherit;
@@ -913,18 +939,18 @@ const formatMemberCount = (room) => {
 .input:focus,
 .textarea:focus {
   outline: none;
-  border-color: #07C160;
+  border-color: #07c160;
 }
 
 .input-readonly {
   width: 100%;
   padding: 0.7rem;
-  border: 1px solid #D9D9D9;
+  border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 0.95rem;
-  background: #F5F5F5;
+  background: #f5f5f5;
   color: #666;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 
 .textarea {
@@ -958,21 +984,21 @@ const formatMemberCount = (room) => {
 }
 
 .btn-cancel {
-  background: #F0F0F0;
+  background: #f0f0f0;
   color: #000;
 }
 
 .btn-cancel:active {
-  background: #E0E0E0;
+  background: #e0e0e0;
 }
 
 .btn-confirm {
-  background: #07C160;
+  background: #07c160;
   color: white;
 }
 
 .btn-confirm:active {
-  background: #06AD56;
+  background: #06ad56;
 }
 
 .btn-confirm:disabled {

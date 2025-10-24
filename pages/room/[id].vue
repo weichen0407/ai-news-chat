@@ -1,821 +1,968 @@
 <template>
   <div class="viewport">
     <div :class="['chat-container', { fullscreen: isFullscreen }]">
-    <!-- 顶部导航 -->
-    <div class="chat-header">
-      <button @click="goBack" class="btn-back">← 返回</button>
-      <div class="room-info">
-        <h2>{{ roomInfo?.name }}</h2>
-        <span class="member-count">{{ formatMemberCount() }}</span>
-      </div>
-      <div class="header-actions">
-        <button 
-          @click="toggleAutoMode" 
-          :class="['btn-auto', { active: isAutoMode }]"
-          :title="isAutoMode ? '点击关闭自动对话' : '点击开启自动对话'"
-        >
-          {{ isAutoMode ? '⏸️ 自动中' : '▶️ 自动' }}
-        </button>
-        <button @click="toggleViewMode" class="btn-view-mode" :title="isFullscreen ? '手机模式' : '全屏模式'">
-          {{ isFullscreen ? '📱' : '🖥️' }}
-        </button>
-        <button v-if="isCreator" @click="showEditModal = true" class="btn-settings">
-          ⚙️ 设置
-        </button>
-      </div>
-    </div>
-
-    <!-- 聊天消息区 -->
-    <div class="messages-container" ref="messagesContainer">
-      <TypingMessage
-        v-for="(msg, index) in messages"
-        :key="index"
-        :content="msg.content"
-        :sender-name="msg.sender_name"
-        :avatar="msg.avatar || '/avatars/placeholder.svg'"
-        :time="formatTime(msg.created_at)"
-        :message-class="msg.sender_type === 'user' && msg.sender_id === currentUserId ? 'mine' : 'other'"
-        :delay="50"
-      />
-
-      <!-- 打字中提示 -->
-      <div v-if="typingNPC" class="typing-indicator">
-        <div class="typing-avatar">
-          <img :src="typingNPC.avatar || '/avatars/placeholder.svg'" :alt="typingNPC.name" class="avatar" />
+      <!-- 顶部导航 -->
+      <div class="chat-header">
+        <button @click="goBack" class="btn-back">← 返回</button>
+        <div class="room-info">
+          <h2>{{ roomInfo?.name }}</h2>
+          <span class="member-count">{{ formatMemberCount() }}</span>
         </div>
-        <div class="typing-content">
-          <div class="sender-name">{{ typingNPC.name }}</div>
-          <div class="typing-dots">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 输入区 -->
-    <div class="input-area">
-      <!-- 模式切换 -->
-      <div class="mode-switch">
-        <button 
-          @click="isAIMode = false" 
-          :class="['mode-btn', { active: !isAIMode }]"
-        >
-          ✏️ 直接输入
-        </button>
-        <button 
-          @click="isAIMode = true" 
-          :class="['mode-btn', { active: isAIMode }]"
-        >
-          🤖 嘴替模式
-        </button>
-      </div>
-
-      <!-- 嘴替模式 -->
-      <template v-if="isAIMode">
-        <!-- 命令输入 -->
-        <div class="command-section">
-          <label class="command-label">💬 给AI的指令：</label>
-          <div class="command-input-wrapper">
-            <input
-              v-model="command"
-              type="text"
-              placeholder="例如：质问马蓉、安慰王宝强..."
-              class="command-input"
-              @keyup.enter="generateMessage"
-              :disabled="isGenerating || isTypingMessage"
-            />
-            <button
-              @click="generateMessage"
-              class="btn-generate"
-              :disabled="!command || isGenerating || isTypingMessage"
-            >
-              ✨ 生成
-            </button>
-          </div>
-        </div>
-
-        <!-- 消息预览 -->
-        <div v-if="draftMessage" class="draft-section">
-          <label class="draft-label">📝 消息预览（可编辑）：</label>
-          <div class="draft-wrapper">
-            <textarea
-              v-model="draftMessage"
-              rows="3"
-              class="draft-textarea"
-              :disabled="isTypingMessage"
-            ></textarea>
-            <button
-              @click="sendMessage"
-              class="btn-send"
-              :disabled="!draftMessage || isTypingMessage"
-            >
-              📤 发送
-            </button>
-          </div>
-        </div>
-      </template>
-
-      <!-- 直接输入模式 -->
-      <template v-else>
-        <div class="direct-input-section">
-          <label class="input-label">💬 直接发送消息 <span class="hint-text">(Ctrl+Enter快速发送)</span></label>
-          <div class="direct-input-wrapper">
-            <textarea
-              v-model="draftMessage"
-              rows="3"
-              placeholder="输入你想说的话..."
-              class="draft-textarea"
-              @keyup.enter.ctrl="sendMessage"
-            ></textarea>
-            <button
-              @click="sendMessage"
-              class="btn-send"
-              :disabled="!draftMessage"
-            >
-              📤 发送
-            </button>
-          </div>
-        </div>
-      </template>
-    </div>
-
-    <!-- 编辑设置弹窗（群主） -->
-    <div v-if="showEditModal" class="modal-overlay" @click="showEditModal = false">
-      <div class="edit-modal" @click.stop>
-        <div class="edit-modal-header">
-          <h2>⚙️ 群聊设置</h2>
-          <button @click="showEditModal = false" class="btn-close">✕</button>
-        </div>
-        
-        <div class="edit-modal-content">
-          <!-- 基本信息 -->
-          <section class="setting-section">
-            <h3>📝 基本信息</h3>
-            
-            <div class="form-group">
-              <label>群聊头像</label>
-              <div class="avatar-selector">
-                <div class="current-avatar-display">{{ editData.avatar || '聊' }}</div>
-                <div class="avatar-buttons">
-                  <button @click="showAvatarPicker = !showAvatarPicker" class="btn-pick-avatar">
-                    选择Emoji
-                  </button>
-                  <label class="btn-upload-file">
-                    上传图片
-                    <input type="file" accept="image/*" @change="uploadRoomAvatar" hidden />
-                  </label>
-                </div>
-              </div>
-              <div v-if="showAvatarPicker" class="emoji-grid">
-                <button 
-                  v-for="emoji in avatarEmojis" 
-                  :key="emoji"
-                  @click="selectRoomAvatar(emoji)"
-                  class="emoji-option"
-                >
-                  {{ emoji }}
-                </button>
-              </div>
-            </div>
-            
-            <div class="form-group">
-              <label>群聊名称</label>
-              <input v-model="editData.name" type="text" class="form-input" />
-            </div>
-            
-            <div class="form-group">
-              <label>群聊描述</label>
-              <textarea v-model="editData.description" rows="2" class="form-textarea"></textarea>
-            </div>
-            
-            <div class="form-group">
-              <label>事件背景（主导剧情）</label>
-              <div class="background-editor">
-                <div class="current-background" v-if="originalEventBackground">
-                  <h4>📖 当前剧情背景：</h4>
-                  <div class="background-preview">{{ originalEventBackground }}</div>
-                </div>
-                <div class="background-summary" v-if="storySummary">
-                  <h4>📝 剧情发展摘要：</h4>
-                  <div class="summary-content">{{ storySummary }}</div>
-                </div>
-                <textarea 
-                  v-model="editData.event_background" 
-                  rows="4" 
-                  class="form-textarea"
-                  placeholder="描述故事背景和主要剧情线..."
-                ></textarea>
-                <div class="background-actions">
-                  <button @click="generateStorySummary" class="btn-summary" :disabled="isGeneratingSummary">
-                    {{ isGeneratingSummary ? '生成中...' : '📊 生成剧情摘要' }}
-                  </button>
-                  <button @click="restoreOriginalBackground" class="btn-restore">
-                    🔄 恢复原剧情
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- 自动对话设置 -->
-          <section class="setting-section">
-            <h3>🤖 自动对话设置</h3>
-            
-            <div class="form-group">
-              <label>对话密度</label>
-              <div class="density-buttons">
-                <button 
-                  @click="editData.dialogue_density = 1"
-                  :class="['density-btn', { active: editData.dialogue_density === 1 }]"
-                >低</button>
-                <button 
-                  @click="editData.dialogue_density = 2"
-                  :class="['density-btn', { active: editData.dialogue_density === 2 }]"
-                >中</button>
-                <button 
-                  @click="editData.dialogue_density = 3"
-                  :class="['density-btn', { active: editData.dialogue_density === 3 }]"
-                >高</button>
-                <button 
-                  @click="editData.dialogue_density = 4"
-                  :class="['density-btn', { active: editData.dialogue_density === 4 }]"
-                >极高</button>
-              </div>
-              <p class="hint-text">{{ getDensityHint() }}</p>
-            </div>
-            
-            <div class="form-group">
-              <button @click="triggerPlot" class="btn-action" :disabled="isTriggering">
-                {{ isTriggering ? '生成中...' : '🎬 立即推动剧情' }}
-              </button>
-            </div>
-          </section>
-
-          <!-- NPC管理 -->
-          <section class="setting-section">
-            <h3>👥 NPC角色管理</h3>
-            
-            <div v-for="(npc, index) in editData.npcs" :key="index" class="npc-item">
-              <div class="npc-header">
-                <div class="npc-name">{{ npc.name }}</div>
-                <div class="npc-avatar-section">
-                  <div class="npc-avatar-display">
-                    <img v-if="npc.avatar && !npc.avatar.startsWith('data:')" :src="npc.avatar" :alt="npc.name" class="npc-avatar-img" />
-                    <span v-else class="npc-avatar-emoji">{{ npc.avatar || '👤' }}</span>
-                  </div>
-                  <div class="npc-avatar-buttons">
-                    <button @click="showNPCAvatarPicker = index" class="btn-pick-avatar-small">
-                      Emoji
-                    </button>
-                    <label class="btn-upload-file-small">
-                      图片
-                      <input type="file" accept="image/*" @change="uploadNPCAvatar($event, index)" hidden />
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div v-if="showNPCAvatarPicker === index" class="npc-emoji-grid">
-                <button 
-                  v-for="emoji in avatarEmojis" 
-                  :key="emoji"
-                  @click="selectNPCAvatar(emoji, index)"
-                  class="emoji-option-small"
-                >
-                  {{ emoji }}
-                </button>
-              </div>
-              <textarea 
-                v-model="npc.persona" 
-                rows="2" 
-                class="form-textarea"
-                placeholder="描述角色性格、背景、目标..."
-              ></textarea>
-            </div>
-          </section>
-        </div>
-        
-        <div class="edit-modal-footer">
-          <button @click="showEditModal = false" class="btn-cancel">取消</button>
-          <button @click="saveSettings" class="btn-save-modal" :disabled="isSaving">
-            {{ isSaving ? '保存中...' : '💾 保存' }}
+        <div class="header-actions">
+          <button
+            @click="toggleAutoMode"
+            :class="['btn-auto', { active: isAutoMode }]"
+            :title="isAutoMode ? '点击关闭自动对话' : '点击开启自动对话'"
+          >
+            {{ isAutoMode ? "⏸️ 自动中" : "▶️ 自动" }}
+          </button>
+          <button
+            @click="toggleViewMode"
+            class="btn-view-mode"
+            :title="isFullscreen ? '手机模式' : '全屏模式'"
+          >
+            {{ isFullscreen ? "📱" : "🖥️" }}
+          </button>
+          <button
+            v-if="isCreator"
+            @click="showEditModal = true"
+            class="btn-settings"
+          >
+            ⚙️ 设置
           </button>
         </div>
       </div>
+
+      <!-- 聊天消息区 -->
+      <div class="messages-container" ref="messagesContainer">
+        <TypingMessage
+          v-for="(msg, index) in messages"
+          :key="index"
+          :content="msg.content"
+          :sender-name="msg.sender_name"
+          :avatar="msg.avatar || '/avatars/placeholder.svg'"
+          :time="formatTime(msg.created_at)"
+          :message-class="
+            msg.sender_type === 'user' && msg.sender_id === currentUserId
+              ? 'mine'
+              : 'other'
+          "
+          :delay="50"
+        />
+
+        <!-- 打字中提示 -->
+        <div v-if="typingNPC" class="typing-indicator">
+          <div class="typing-avatar">
+            <img
+              :src="typingNPC.avatar || '/avatars/placeholder.svg'"
+              :alt="typingNPC.name"
+              class="avatar"
+            />
+          </div>
+          <div class="typing-content">
+            <div class="sender-name">{{ typingNPC.name }}</div>
+            <div class="typing-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 输入区 -->
+      <div class="input-area">
+        <!-- 模式切换 -->
+        <div class="mode-switch">
+          <button
+            @click="isAIMode = false"
+            :class="['mode-btn', { active: !isAIMode }]"
+          >
+            ✏️ 直接输入
+          </button>
+          <button
+            @click="isAIMode = true"
+            :class="['mode-btn', { active: isAIMode }]"
+          >
+            🤖 嘴替模式
+          </button>
+        </div>
+
+        <!-- 嘴替模式 -->
+        <template v-if="isAIMode">
+          <!-- 命令输入 -->
+          <div class="command-section">
+            <label class="command-label">💬 给AI的指令：</label>
+            <div class="command-input-wrapper">
+              <input
+                v-model="command"
+                type="text"
+                placeholder="例如：质问马蓉、安慰王宝强..."
+                class="command-input"
+                @keyup.enter="generateMessage"
+                :disabled="isGenerating || isTypingMessage"
+              />
+              <button
+                @click="generateMessage"
+                class="btn-generate"
+                :disabled="!command || isGenerating || isTypingMessage"
+              >
+                ✨ 生成
+              </button>
+            </div>
+          </div>
+
+          <!-- 消息预览 -->
+          <div v-if="draftMessage" class="draft-section">
+            <label class="draft-label">📝 消息预览（可编辑）：</label>
+            <div class="draft-wrapper">
+              <textarea
+                v-model="draftMessage"
+                rows="3"
+                class="draft-textarea"
+                :disabled="isTypingMessage"
+              ></textarea>
+              <button
+                @click="sendMessage"
+                class="btn-send"
+                :disabled="!draftMessage || isTypingMessage"
+              >
+                📤 发送
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <!-- 直接输入模式 -->
+        <template v-else>
+          <div class="direct-input-section">
+            <label class="input-label"
+              >💬 直接发送消息
+              <span class="hint-text">(Ctrl+Enter快速发送)</span></label
+            >
+            <div class="direct-input-wrapper">
+              <textarea
+                v-model="draftMessage"
+                rows="3"
+                placeholder="输入你想说的话..."
+                class="draft-textarea"
+                @keyup.enter.ctrl="sendMessage"
+              ></textarea>
+              <button
+                @click="sendMessage"
+                class="btn-send"
+                :disabled="!draftMessage"
+              >
+                📤 发送
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- 编辑设置弹窗（群主） -->
+      <div
+        v-if="showEditModal"
+        class="modal-overlay"
+        @click="showEditModal = false"
+      >
+        <div class="edit-modal" @click.stop>
+          <div class="edit-modal-header">
+            <h2>⚙️ 群聊设置</h2>
+            <button @click="showEditModal = false" class="btn-close">✕</button>
+          </div>
+
+          <div class="edit-modal-content">
+            <!-- 基本信息 -->
+            <section class="setting-section">
+              <h3>📝 基本信息</h3>
+
+              <div class="form-group">
+                <label>群聊头像</label>
+                <div class="avatar-selector">
+                  <div class="current-avatar-display">
+                    {{ editData.avatar || "聊" }}
+                  </div>
+                  <div class="avatar-buttons">
+                    <button
+                      @click="showAvatarPicker = !showAvatarPicker"
+                      class="btn-pick-avatar"
+                    >
+                      选择Emoji
+                    </button>
+                    <label class="btn-upload-file">
+                      上传图片
+                      <input
+                        type="file"
+                        accept="image/*"
+                        @change="uploadRoomAvatar"
+                        hidden
+                      />
+                    </label>
+                  </div>
+                </div>
+                <div v-if="showAvatarPicker" class="emoji-grid">
+                  <button
+                    v-for="emoji in avatarEmojis"
+                    :key="emoji"
+                    @click="selectRoomAvatar(emoji)"
+                    class="emoji-option"
+                  >
+                    {{ emoji }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>群聊名称</label>
+                <input v-model="editData.name" type="text" class="form-input" />
+              </div>
+
+              <div class="form-group">
+                <label>群聊描述</label>
+                <textarea
+                  v-model="editData.description"
+                  rows="2"
+                  class="form-textarea"
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>事件背景（主导剧情）</label>
+                <div class="background-editor">
+                  <div
+                    class="current-background"
+                    v-if="originalEventBackground"
+                  >
+                    <h4>📖 当前剧情背景：</h4>
+                    <div class="background-preview">
+                      {{ originalEventBackground }}
+                    </div>
+                  </div>
+                  <div class="background-summary" v-if="storySummary">
+                    <h4>📝 剧情发展摘要：</h4>
+                    <div class="summary-content">{{ storySummary }}</div>
+                  </div>
+                  <textarea
+                    v-model="editData.event_background"
+                    rows="4"
+                    class="form-textarea"
+                    placeholder="描述故事背景和主要剧情线..."
+                  ></textarea>
+                  <div class="background-actions">
+                    <button
+                      @click="generateStorySummary"
+                      class="btn-summary"
+                      :disabled="isGeneratingSummary"
+                    >
+                      {{
+                        isGeneratingSummary ? "生成中..." : "📊 生成剧情摘要"
+                      }}
+                    </button>
+                    <button
+                      @click="restoreOriginalBackground"
+                      class="btn-restore"
+                    >
+                      🔄 恢复原剧情
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 自动对话设置 -->
+            <section class="setting-section">
+              <h3>🤖 自动对话设置</h3>
+
+              <div class="form-group">
+                <label>对话密度</label>
+                <div class="density-buttons">
+                  <button
+                    @click="editData.dialogue_density = 1"
+                    :class="[
+                      'density-btn',
+                      { active: editData.dialogue_density === 1 },
+                    ]"
+                  >
+                    低
+                  </button>
+                  <button
+                    @click="editData.dialogue_density = 2"
+                    :class="[
+                      'density-btn',
+                      { active: editData.dialogue_density === 2 },
+                    ]"
+                  >
+                    中
+                  </button>
+                  <button
+                    @click="editData.dialogue_density = 3"
+                    :class="[
+                      'density-btn',
+                      { active: editData.dialogue_density === 3 },
+                    ]"
+                  >
+                    高
+                  </button>
+                  <button
+                    @click="editData.dialogue_density = 4"
+                    :class="[
+                      'density-btn',
+                      { active: editData.dialogue_density === 4 },
+                    ]"
+                  >
+                    极高
+                  </button>
+                </div>
+                <p class="hint-text">{{ getDensityHint() }}</p>
+              </div>
+
+              <div class="form-group">
+                <button
+                  @click="triggerPlot"
+                  class="btn-action"
+                  :disabled="isTriggering"
+                >
+                  {{ isTriggering ? "生成中..." : "🎬 立即推动剧情" }}
+                </button>
+              </div>
+            </section>
+
+            <!-- NPC管理 -->
+            <section class="setting-section">
+              <h3>👥 NPC角色管理</h3>
+
+              <div
+                v-for="(npc, index) in editData.npcs"
+                :key="index"
+                class="npc-item"
+              >
+                <div class="npc-header">
+                  <div class="npc-name">{{ npc.name }}</div>
+                  <div class="npc-avatar-section">
+                    <div class="npc-avatar-display">
+                      <img
+                        v-if="npc.avatar && !npc.avatar.startsWith('data:')"
+                        :src="npc.avatar"
+                        :alt="npc.name"
+                        class="npc-avatar-img"
+                      />
+                      <span v-else class="npc-avatar-emoji">{{
+                        npc.avatar || "👤"
+                      }}</span>
+                    </div>
+                    <div class="npc-avatar-buttons">
+                      <button
+                        @click="showNPCAvatarPicker = index"
+                        class="btn-pick-avatar-small"
+                      >
+                        Emoji
+                      </button>
+                      <label class="btn-upload-file-small">
+                        图片
+                        <input
+                          type="file"
+                          accept="image/*"
+                          @change="uploadNPCAvatar($event, index)"
+                          hidden
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  v-if="showNPCAvatarPicker === index"
+                  class="npc-emoji-grid"
+                >
+                  <button
+                    v-for="emoji in avatarEmojis"
+                    :key="emoji"
+                    @click="selectNPCAvatar(emoji, index)"
+                    class="emoji-option-small"
+                  >
+                    {{ emoji }}
+                  </button>
+                </div>
+                <textarea
+                  v-model="npc.persona"
+                  rows="2"
+                  class="form-textarea"
+                  placeholder="描述角色性格、背景、目标..."
+                ></textarea>
+              </div>
+            </section>
+          </div>
+
+          <div class="edit-modal-footer">
+            <button @click="showEditModal = false" class="btn-cancel">
+              取消
+            </button>
+            <button
+              @click="saveSettings"
+              class="btn-save-modal"
+              :disabled="isSaving"
+            >
+              {{ isSaving ? "保存中..." : "💾 保存" }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import TypingMessage from '~/components/TypingMessage.vue'
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import TypingMessage from "~/components/TypingMessage.vue";
 
 definePageMeta({
-  middleware: 'auth'
-})
+  middleware: "auth",
+});
 
-const route = useRoute()
-const router = useRouter()
-const roomId = route.params.id
+const route = useRoute();
+const router = useRouter();
+const roomId = route.params.id;
 
-const roomInfo = ref(null)
-const npcs = ref([])
-const members = ref([])
-const isCreator = ref(false)
-const currentUserId = ref(null)
+const roomInfo = ref(null);
+const npcs = ref([]);
+const members = ref([]);
+const isCreator = ref(false);
+const currentUserId = ref(null);
 
-const messages = ref([])
-const command = ref('')
-const draftMessage = ref('')
-const isGenerating = ref(false)
-const isTypingMessage = ref(false)
-const isTyping = ref(false)
-const isAIMode = ref(true) // true=嘴替模式, false=直接输入模式
-const isAutoMode = ref(false) // 自动对话模式
-const isFullscreen = ref(true) // 默认全屏（电脑模式）
-const typingNPC = ref(null) // 当前正在输入的NPC
-let autoModeInterval = null
+const messages = ref([]);
+const command = ref("");
+const draftMessage = ref("");
+const isGenerating = ref(false);
+const isTypingMessage = ref(false);
+const isTyping = ref(false);
+const isAIMode = ref(true); // true=嘴替模式, false=直接输入模式
+const isAutoMode = ref(false); // 自动对话模式
+const isFullscreen = ref(true); // 默认全屏（电脑模式）
+const typingNPC = ref(null); // 当前正在输入的NPC
+let autoModeInterval = null;
 
-const messagesContainer = ref(null)
-const showSettings = ref(false)
-const showEditModal = ref(false)
-const showAvatarPicker = ref(false)
-const showNPCAvatarPicker = ref(null)
-const originalEventBackground = ref('')
-const storySummary = ref('')
-const isGeneratingSummary = ref(false)
+const messagesContainer = ref(null);
+const showSettings = ref(false);
+const showEditModal = ref(false);
+const showAvatarPicker = ref(false);
+const showNPCAvatarPicker = ref(null);
+const originalEventBackground = ref("");
+const storySummary = ref("");
+const isGeneratingSummary = ref(false);
 const editData = ref({
-  name: '',
-  description: '',
-  event_background: '',
+  name: "",
+  description: "",
+  event_background: "",
   dialogue_density: 2,
-  avatar: '聊',
-  npcs: []
-})
-const isSaving = ref(false)
-const isTriggering = ref(false)
+  avatar: "聊",
+  npcs: [],
+});
+const isSaving = ref(false);
+const isTriggering = ref(false);
 
 const avatarEmojis = [
-  '💬', '👥', '🎭', '🎬', '📱', '💡', '🌟', '🔥', '❤️', '😀',
-  '😎', '🤔', '😂', '😍', '🎉', '🎊', '🎈', '🎯', '🚀', '⭐',
-  '🌈', '🎨', '🎵', '🎮', '⚡', '💰', '🏆', '👑', '🎪', '🎢'
-]
+  "💬",
+  "👥",
+  "🎭",
+  "🎬",
+  "📱",
+  "💡",
+  "🌟",
+  "🔥",
+  "❤️",
+  "😀",
+  "😎",
+  "🤔",
+  "😂",
+  "😍",
+  "🎉",
+  "🎊",
+  "🎈",
+  "🎯",
+  "🚀",
+  "⭐",
+  "🌈",
+  "🎨",
+  "🎵",
+  "🎮",
+  "⚡",
+  "💰",
+  "🏆",
+  "👑",
+  "🎪",
+  "🎢",
+];
 
 onMounted(async () => {
-  await loadCurrentUser()
-  await loadRoomInfo()
-  await loadMessages()
-  scrollToBottom()
-})
+  await loadCurrentUser();
+  await loadRoomInfo();
+  await loadMessages();
+  scrollToBottom();
+});
 
 const loadCurrentUser = async () => {
-  const response = await $fetch('/api/auth/me')
+  const response = await $fetch("/api/auth/me");
   if (response.success) {
-    currentUserId.value = response.user.id
+    currentUserId.value = response.user.id;
   }
-}
+};
 
 const loadRoomInfo = async () => {
   try {
-    const response = await $fetch(`/api/rooms/${roomId}/info`)
+    const response = await $fetch(`/api/rooms/${roomId}/info`);
     if (response.success) {
-      roomInfo.value = response.room
-      npcs.value = response.npcs
-      members.value = response.members
-      isCreator.value = response.isCreator
-      console.log('🔧 isCreator:', isCreator.value, 'Room:', roomInfo.value?.name)
-      
+      roomInfo.value = response.room;
+      npcs.value = response.npcs;
+      members.value = response.members;
+      isCreator.value = response.isCreator;
+      console.log(
+        "🔧 isCreator:",
+        isCreator.value,
+        "Room:",
+        roomInfo.value?.name
+      );
+
       // 保存原始剧情背景
-      originalEventBackground.value = response.room.event_background || ''
-      
+      originalEventBackground.value = response.room.event_background || "";
+
       // 初始化编辑数据
       editData.value = {
-        name: response.room.name || '',
-        description: response.room.description || '',
-        event_background: response.room.event_background || '',
+        name: response.room.name || "",
+        description: response.room.description || "",
+        event_background: response.room.event_background || "",
         dialogue_density: response.room.dialogue_density || 2,
-        avatar: response.room.avatar || '聊',
-        npcs: response.npcs ? response.npcs.map(npc => ({
-          id: npc.id,
-          name: npc.name,
-          avatar: npc.avatar,
-          persona: npc.profile || npc.persona || '' // 映射 profile 到 persona
-        })) : []
-      }
+        avatar: response.room.avatar || "聊",
+        npcs: response.npcs
+          ? response.npcs.map((npc) => ({
+              id: npc.id,
+              name: npc.name,
+              avatar: npc.avatar,
+              persona: npc.profile || npc.persona || "", // 映射 profile 到 persona
+            }))
+          : [],
+      };
     } else {
-      alert('无法加载房间信息')
-      goBack()
+      alert("无法加载房间信息");
+      goBack();
     }
   } catch (error) {
-    alert('加载失败')
-    goBack()
+    alert("加载失败");
+    goBack();
   }
-}
+};
 
 const loadMessages = async () => {
   try {
-    const response = await $fetch(`/api/messages/${roomId}`)
+    const response = await $fetch(`/api/messages/${roomId}`);
     if (response.success) {
-      messages.value = response.messages
+      messages.value = response.messages;
     }
   } catch (error) {
-    console.error('加载消息失败:', error)
+    console.error("加载消息失败:", error);
   }
-}
+};
 
 const generateMessage = async () => {
-  if (!command.value || isGenerating.value) return
-  
-  isGenerating.value = true
-  draftMessage.value = ''
-  
+  if (!command.value || isGenerating.value) return;
+
+  isGenerating.value = true;
+  draftMessage.value = "";
+
   try {
-    const response = await $fetch('/api/messages/generate-my-message', {
-      method: 'POST',
+    const response = await $fetch("/api/messages/generate-my-message", {
+      method: "POST",
       body: {
         roomId,
-        command: command.value
-      }
-    })
-    
+        command: command.value,
+      },
+    });
+
     if (response.success) {
-      await typeMessage(response.message)
-      command.value = ''
+      await typeMessage(response.message);
+      command.value = "";
     }
   } catch (error) {
-    alert('生成失败')
+    alert("生成失败");
   } finally {
-    isGenerating.value = false
+    isGenerating.value = false;
   }
-}
+};
 
 const typeMessage = async (text) => {
-  isTypingMessage.value = true
-  draftMessage.value = ''
-  
+  isTypingMessage.value = true;
+  draftMessage.value = "";
+
   for (let i = 0; i < text.length; i++) {
-    draftMessage.value += text[i]
-    await new Promise(resolve => setTimeout(resolve, 30))
+    draftMessage.value += text[i];
+    await new Promise((resolve) => setTimeout(resolve, 30));
   }
-  
-  isTypingMessage.value = false
-}
+
+  isTypingMessage.value = false;
+};
 
 const sendMessage = async () => {
-  if (!draftMessage.value) return
-  
-  const content = draftMessage.value
-  draftMessage.value = ''
-  command.value = '' // 清空命令
-  
+  if (!draftMessage.value) return;
+
+  const content = draftMessage.value;
+  draftMessage.value = "";
+  command.value = ""; // 清空命令
+
   try {
     // 发送消息
-    await $fetch('/api/messages/send', {
-      method: 'POST',
+    await $fetch("/api/messages/send", {
+      method: "POST",
       body: {
         roomId,
-        content
-      }
-    })
-    
+        content,
+      },
+    });
+
     // 重新加载消息
-    await loadMessages()
-    await nextTick()
-    scrollToBottom()
-    
+    await loadMessages();
+    await nextTick();
+    scrollToBottom();
+
     // 生成NPC回复（延迟显示）
-    await generateNPCResponsesWithDelay()
+    await generateNPCResponsesWithDelay();
   } catch (error) {
-    console.error('发送消息失败:', error)
-    alert('发送失败')
-    isTyping.value = false
+    console.error("发送消息失败:", error);
+    alert("发送失败");
+    isTyping.value = false;
   }
-}
+};
 
 const scrollToBottom = () => {
   if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
   }
-}
+};
 
 const goBack = () => {
-  router.push('/')
-}
+  router.push("/");
+};
 
 const getDensityHint = () => {
   const hints = {
-    1: '低频率：每60秒左右生成对话',
-    2: '中频率：每40秒左右生成对话',
-    3: '高频率：每25秒左右生成对话',
-    4: '极高频率：每15秒左右生成对话'
-  }
-  return hints[editData.value.dialogue_density] || hints[2]
-}
+    1: "低频率：每60秒左右生成对话",
+    2: "中频率：每40秒左右生成对话",
+    3: "高频率：每25秒左右生成对话",
+    4: "极高频率：每15秒左右生成对话",
+  };
+  return hints[editData.value.dialogue_density] || hints[2];
+};
 
 const selectRoomAvatar = (emoji) => {
-  editData.value.avatar = emoji
-  showAvatarPicker.value = false
-}
+  editData.value.avatar = emoji;
+  showAvatarPicker.value = false;
+};
 
 const uploadRoomAvatar = (event) => {
-  const file = event.target.files[0]
+  const file = event.target.files[0];
   if (file) {
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = (e) => {
-      editData.value.avatar = e.target.result
-      showAvatarPicker.value = false
-    }
-    reader.readAsDataURL(file)
+      editData.value.avatar = e.target.result;
+      showAvatarPicker.value = false;
+    };
+    reader.readAsDataURL(file);
   }
-}
+};
 
 // NPC头像相关方法
 const selectNPCAvatar = (emoji, index) => {
-  editData.value.npcs[index].avatar = emoji
-  showNPCAvatarPicker.value = null
-}
+  editData.value.npcs[index].avatar = emoji;
+  showNPCAvatarPicker.value = null;
+};
 
 const uploadNPCAvatar = (event, index) => {
-  const file = event.target.files[0]
+  const file = event.target.files[0];
   if (file) {
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = (e) => {
-      editData.value.npcs[index].avatar = e.target.result
-    }
-    reader.readAsDataURL(file)
+      editData.value.npcs[index].avatar = e.target.result;
+    };
+    reader.readAsDataURL(file);
   }
-}
+};
 
 // 剧情摘要相关方法
 const generateStorySummary = async () => {
-  if (isGeneratingSummary.value) return
-  
-  isGeneratingSummary.value = true
+  if (isGeneratingSummary.value) return;
+
+  isGeneratingSummary.value = true;
   try {
     // 获取最近的聊天记录
-    const recentMessages = messages.value.slice(-20).map(msg => 
-      `${msg.sender_name}: ${msg.content}`
-    ).join('\n')
-    
-    const response = await $fetch('/api/messages/generate-story-summary', {
-      method: 'POST',
+    const recentMessages = messages.value
+      .slice(-20)
+      .map((msg) => `${msg.sender_name}: ${msg.content}`)
+      .join("\n");
+
+    const response = await $fetch("/api/messages/generate-story-summary", {
+      method: "POST",
       body: {
         roomId: roomId,
         originalBackground: originalEventBackground.value,
         currentBackground: editData.value.event_background,
-        recentMessages: recentMessages
-      }
-    })
-    
+        recentMessages: recentMessages,
+      },
+    });
+
     if (response.success) {
-      storySummary.value = response.summary
+      storySummary.value = response.summary;
     } else {
-      alert('生成摘要失败: ' + response.error)
+      alert("生成摘要失败: " + response.error);
     }
   } catch (error) {
-    console.error('生成摘要失败:', error)
-    alert('生成摘要时出错')
+    console.error("生成摘要失败:", error);
+    alert("生成摘要时出错");
   } finally {
-    isGeneratingSummary.value = false
+    isGeneratingSummary.value = false;
   }
-}
+};
 
 const restoreOriginalBackground = () => {
-  editData.value.event_background = originalEventBackground.value
-  storySummary.value = ''
-}
+  editData.value.event_background = originalEventBackground.value;
+  storySummary.value = "";
+};
 
 const saveSettings = async () => {
-  if (isSaving.value) return
-  
-  isSaving.value = true
+  if (isSaving.value) return;
+
+  isSaving.value = true;
   try {
     const response = await $fetch(`/api/rooms/${roomId}/update`, {
-      method: 'POST',
+      method: "POST",
       body: {
         name: editData.value.name,
         description: editData.value.description,
         event_background: editData.value.event_background,
         dialogue_density: editData.value.dialogue_density,
         avatar: editData.value.avatar,
-        npcs: editData.value.npcs
-      }
-    })
-    
+        npcs: editData.value.npcs,
+      },
+    });
+
     if (response.success) {
-      alert('✅ 保存成功！')
-      showEditModal.value = false
-      await loadRoomInfo() // 重新加载数据
+      alert("✅ 保存成功！");
+      showEditModal.value = false;
+      await loadRoomInfo(); // 重新加载数据
     } else {
-      alert('保存失败: ' + response.error)
+      alert("保存失败: " + response.error);
     }
   } catch (error) {
-    console.error('保存失败:', error)
-    alert('保存时出错')
+    console.error("保存失败:", error);
+    alert("保存时出错");
   } finally {
-    isSaving.value = false
+    isSaving.value = false;
   }
-}
+};
 
 const triggerPlot = async () => {
-  if (isTriggering.value) return
-  
-  isTriggering.value = true
+  if (isTriggering.value) return;
+
+  isTriggering.value = true;
   try {
-    const response = await $fetch('/api/messages/auto-generate', {
-      method: 'POST',
+    const response = await $fetch("/api/messages/auto-generate", {
+      method: "POST",
       body: {
         roomId: roomId,
-        rounds: 1
-      }
-    })
-    
+        rounds: 1,
+      },
+    });
+
     if (response.success) {
-      alert(`✅ 已生成 ${response.messageCount} 条对话！`)
-      await loadMessages() // 重新加载消息
+      alert(`✅ 已生成 ${response.messageCount} 条对话！`);
+      await loadMessages(); // 重新加载消息
     } else {
-      alert('生成失败: ' + response.error)
+      alert("生成失败: " + response.error);
     }
   } catch (error) {
-    console.error('生成失败:', error)
-    alert('生成剧情时出错')
+    console.error("生成失败:", error);
+    alert("生成剧情时出错");
   } finally {
-    isTriggering.value = false
+    isTriggering.value = false;
   }
-}
+};
 
 const formatTime = (dateStr) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
-}
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return `${date.getHours().toString().padStart(2, "0")}:${date
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}`;
+};
 
 const formatMemberCount = () => {
-  const npcCount = npcs.value?.length || 0
-  const playerCount = members.value?.length || 0
-  const total = npcCount + playerCount
-  
-  return `${total}人（${npcCount}AI+${playerCount}玩家）`
-}
+  const npcCount = npcs.value?.length || 0;
+  const playerCount = members.value?.length || 0;
+  const total = npcCount + playerCount;
+
+  return `${total}人（${npcCount}AI+${playerCount}玩家）`;
+};
 
 const toggleAutoMode = () => {
-  isAutoMode.value = !isAutoMode.value
-  
+  isAutoMode.value = !isAutoMode.value;
+
   if (isAutoMode.value) {
-    startAutoMode()
+    startAutoMode();
   } else {
-    stopAutoMode()
+    stopAutoMode();
   }
-}
+};
 
 const startAutoMode = async () => {
-  console.log('开启自动对话模式')
-  
+  console.log("开启自动对话模式");
+
   // 立即生成一轮
-  await generateAutoDialogue()
-  
+  await generateAutoDialogue();
+
   // 根据房间密度设置决定间隔
   const getInterval = () => {
-    const density = roomInfo.value?.dialogue_density || 2
+    const density = roomInfo.value?.dialogue_density || 2;
     const intervals = {
       1: { min: 20000, max: 30000 }, // 20-30秒
       2: { min: 10000, max: 20000 }, // 10-20秒
-      3: { min: 5000, max: 15000 },  // 5-15秒
-      4: { min: 3000, max: 10000 }   // 3-10秒
-    }
-    const config = intervals[density]
-    return config.min + Math.random() * (config.max - config.min)
-  }
-  
+      3: { min: 5000, max: 15000 }, // 5-15秒
+      4: { min: 3000, max: 10000 }, // 3-10秒
+    };
+    const config = intervals[density];
+    return config.min + Math.random() * (config.max - config.min);
+  };
+
   const scheduleNext = async () => {
-    if (!isAutoMode.value) return
-    
-    await generateAutoDialogue()
-    autoModeInterval = setTimeout(scheduleNext, getInterval())
-  }
-  
-  autoModeInterval = setTimeout(scheduleNext, getInterval())
-}
+    if (!isAutoMode.value) return;
+
+    await generateAutoDialogue();
+    autoModeInterval = setTimeout(scheduleNext, getInterval());
+  };
+
+  autoModeInterval = setTimeout(scheduleNext, getInterval());
+};
 
 const stopAutoMode = () => {
-  console.log('关闭自动对话模式')
+  console.log("关闭自动对话模式");
   if (autoModeInterval) {
-    clearTimeout(autoModeInterval)
-    autoModeInterval = null
+    clearTimeout(autoModeInterval);
+    autoModeInterval = null;
   }
-}
+};
 
 const generateAutoDialogue = async () => {
-  if (typingNPC.value) return // 如果有人正在输入，跳过
-  
+  if (typingNPC.value) return; // 如果有人正在输入，跳过
+
   try {
-    const response = await $fetch('/api/messages/auto-generate', {
-      method: 'POST',
-      body: { 
+    const response = await $fetch("/api/messages/auto-generate", {
+      method: "POST",
+      body: {
         roomId,
-        rounds: 1 // 每次生成1轮（1-3条对话）
-      }
-    })
-    
+        rounds: 1, // 每次生成1轮（1-3条对话）
+      },
+    });
+
     if (response.success && response.messages && response.messages.length > 0) {
-      console.log('自动生成了', response.messages.length, '条对话')
-      
+      console.log("自动生成了", response.messages.length, "条对话");
+
       // 逐条显示新消息，带"正在输入"效果
       for (let i = 0; i < response.messages.length; i++) {
-        const msg = response.messages[i]
-        
+        const msg = response.messages[i];
+
         // 找到对应的NPC
-        const npc = npcs.value.find(n => n.name === msg.sender_name)
-        
+        const npc = npcs.value.find((n) => n.name === msg.sender_name);
+
         // 显示"正在输入..."
         if (npc) {
-          typingNPC.value = npc
-          await nextTick()
-          scrollToBottom()
+          typingNPC.value = npc;
+          await nextTick();
+          scrollToBottom();
         }
-        
+
         // 随机延迟1.5-3秒
-        const delay = 1500 + Math.random() * 1500
-        await new Promise(resolve => setTimeout(resolve, delay))
-        
+        const delay = 1500 + Math.random() * 1500;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
         // 隐藏"正在输入"
-        typingNPC.value = null
-        
+        typingNPC.value = null;
+
         // 加载新消息
-        await loadMessages()
-        await nextTick()
-        scrollToBottom()
-        
+        await loadMessages();
+        await nextTick();
+        scrollToBottom();
+
         // 消息之间的间隔
         if (i < response.messages.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500))
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
     }
   } catch (error) {
-    console.error('自动对话生成失败:', error)
+    console.error("自动对话生成失败:", error);
   }
-}
+};
 
 const generateNPCResponsesWithDelay = async () => {
   try {
-    const response = await $fetch('/api/messages/generate-npc-responses', {
-      method: 'POST',
-      body: { roomId }
-    })
-    
-    if (response.success && response.responses && response.responses.length > 0) {
+    const response = await $fetch("/api/messages/generate-npc-responses", {
+      method: "POST",
+      body: { roomId },
+    });
+
+    if (
+      response.success &&
+      response.responses &&
+      response.responses.length > 0
+    ) {
       // 逐个显示NPC回复，每个都有"正在输入"提示
       for (let i = 0; i < response.responses.length; i++) {
-        const resp = response.responses[i]
-        
+        const resp = response.responses[i];
+
         // 找到对应的NPC信息
-        const npc = npcs.value.find(n => n.name === resp.sender_name || n.id === resp.npc_id)
-        
+        const npc = npcs.value.find(
+          (n) => n.name === resp.sender_name || n.id === resp.npc_id
+        );
+
         // 显示"正在输入..."
         if (npc) {
-          typingNPC.value = npc
-          await nextTick()
-          scrollToBottom()
+          typingNPC.value = npc;
+          await nextTick();
+          scrollToBottom();
         }
-        
+
         // 随机延迟1-3秒（模拟打字）
-        const delay = 1500 + Math.random() * 1500
-        await new Promise(resolve => setTimeout(resolve, delay))
-        
+        const delay = 1500 + Math.random() * 1500;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
         // 隐藏"正在输入"
-        typingNPC.value = null
-        
+        typingNPC.value = null;
+
         // 重新加载消息（新消息已经在后端保存了）
-        await loadMessages()
-        await nextTick()
-        scrollToBottom()
-        
+        await loadMessages();
+        await nextTick();
+        scrollToBottom();
+
         // 消息之间的间隔
         if (i < response.responses.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500))
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
     }
   } catch (error) {
-    console.error('生成NPC回复失败:', error)
+    console.error("生成NPC回复失败:", error);
   }
-}
+};
 
 const toggleViewMode = () => {
-  isFullscreen.value = !isFullscreen.value
-}
+  isFullscreen.value = !isFullscreen.value;
+};
 
 // 组件卸载时清理定时器
 onUnmounted(() => {
-  stopAutoMode()
-})
+  stopAutoMode();
+});
 </script>
 
 <style scoped>
 .viewport {
   min-height: 100vh;
-  background: #2C2C2C;
+  background: #2c2c2c;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -825,19 +972,17 @@ onUnmounted(() => {
 .chat-container {
   width: 100%;
   max-width: 420px;
-  height: 95vh;
-  max-height: 900px;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #EDEDED;
-  border-radius: 16px;
+  background: #ededed;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: none;
 }
 
 .chat-container.fullscreen {
   max-width: 100%;
-  max-height: 100%;
   height: 100vh;
   border-radius: 0;
   box-shadow: none;
@@ -847,7 +992,7 @@ onUnmounted(() => {
   .viewport {
     padding: 0;
   }
-  
+
   .chat-container {
     max-width: 100%;
     height: 100vh;
@@ -857,13 +1002,13 @@ onUnmounted(() => {
 }
 
 .chat-header {
-  background: #F7F7F7;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid #D5D5D5;
+  background: #f7f7f7;
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid #d5d5d5;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 50px;
+  min-height: 44px;
 }
 
 .btn-back {
@@ -872,7 +1017,7 @@ onUnmounted(() => {
   border: none;
   cursor: pointer;
   font-size: 1rem;
-  color: #576B95;
+  color: #576b95;
 }
 
 .btn-back:active {
@@ -899,7 +1044,7 @@ onUnmounted(() => {
 .btn-settings {
   padding: 0.3rem 0.6rem;
   background: transparent;
-  color: #576B95;
+  color: #576b95;
   border: none;
   cursor: pointer;
   font-size: 1rem;
@@ -918,8 +1063,8 @@ onUnmounted(() => {
 .btn-auto {
   padding: 0.3rem 0.8rem;
   background: transparent;
-  color: #576B95;
-  border: 1px solid #576B95;
+  color: #576b95;
+  border: 1px solid #576b95;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.85rem;
@@ -928,9 +1073,9 @@ onUnmounted(() => {
 }
 
 .btn-auto.active {
-  background: #07C160;
+  background: #07c160;
   color: white;
-  border-color: #07C160;
+  border-color: #07c160;
   animation: pulse 2s infinite;
 }
 
@@ -941,7 +1086,7 @@ onUnmounted(() => {
 .btn-view-mode {
   padding: 0.3rem 0.6rem;
   background: transparent;
-  color: #576B95;
+  color: #576b95;
   border: none;
   cursor: pointer;
   font-size: 1rem;
@@ -953,15 +1098,20 @@ onUnmounted(() => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .messages-container {
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
-  background: #EDEDED;
+  background: #ededed;
 }
 
 .message {
@@ -976,8 +1126,8 @@ onUnmounted(() => {
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 4px;
   object-fit: cover;
   flex-shrink: 0;
@@ -1012,12 +1162,12 @@ onUnmounted(() => {
 }
 
 .message.mine .message-bubble {
-  background: #95EC69;
+  background: #95ec69;
 }
 
 .message-time {
   font-size: 0.7rem;
-  color: #B8B8B8;
+  color: #b8b8b8;
   margin-top: 0.2rem;
   padding: 0 0.5rem;
 }
@@ -1056,7 +1206,7 @@ onUnmounted(() => {
   display: flex;
   gap: 4px;
   padding: 0.6rem 1rem;
-  background: #F0F0F0;
+  background: #f0f0f0;
   border-radius: 18px;
   width: fit-content;
 }
@@ -1078,11 +1228,13 @@ onUnmounted(() => {
 }
 
 @keyframes typing {
-  0%, 60%, 100% { 
+  0%,
+  60%,
+  100% {
     transform: translateY(0);
     opacity: 0.7;
   }
-  30% { 
+  30% {
     transform: translateY(-8px);
     opacity: 1;
   }
@@ -1100,16 +1252,16 @@ onUnmounted(() => {
 }
 
 .input-area {
-  background: #F7F7F7;
-  border-top: 1px solid #D5D5D5;
-  padding: 0.8rem 1rem;
+  background: #f7f7f7;
+  border-top: 1px solid #d5d5d5;
+  padding: 0.6rem 1rem;
 }
 
 .mode-switch {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 0.8rem;
-  background: #E8E8E8;
+  margin-bottom: 0.6rem;
+  background: #e8e8e8;
   padding: 0.3rem;
   border-radius: 6px;
 }
@@ -1129,8 +1281,8 @@ onUnmounted(() => {
 
 .mode-btn.active {
   background: white;
-  color: #07C160;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  color: #07c160;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .mode-btn:active {
@@ -1140,7 +1292,7 @@ onUnmounted(() => {
 .command-section,
 .draft-section,
 .direct-input-section {
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.6rem;
 }
 
 .command-section:last-child,
@@ -1161,7 +1313,7 @@ onUnmounted(() => {
 
 .hint-text {
   font-size: 0.7rem;
-  color: #B8B8B8;
+  color: #b8b8b8;
   font-weight: 400;
 }
 
@@ -1181,7 +1333,7 @@ onUnmounted(() => {
 .command-input {
   flex: 1;
   padding: 0.6rem 0.8rem;
-  border: 1px solid #D9D9D9;
+  border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 0.95rem;
   background: white;
@@ -1189,13 +1341,13 @@ onUnmounted(() => {
 
 .command-input:focus {
   outline: none;
-  border-color: #576B95;
+  border-color: #576b95;
 }
 
 .draft-textarea {
   flex: 1;
   padding: 0.6rem 0.8rem;
-  border: 1px solid #D9D9D9;
+  border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 0.95rem;
   resize: none;
@@ -1206,7 +1358,7 @@ onUnmounted(() => {
 
 .draft-textarea:focus {
   outline: none;
-  border-color: #07C160;
+  border-color: #07c160;
 }
 
 .btn-generate,
@@ -1222,7 +1374,7 @@ onUnmounted(() => {
 }
 
 .btn-generate {
-  background: #576B95;
+  background: #576b95;
   color: white;
 }
 
@@ -1231,12 +1383,12 @@ onUnmounted(() => {
 }
 
 .btn-send {
-  background: #07C160;
+  background: #07c160;
   color: white;
 }
 
 .btn-send:active {
-  background: #06AD56;
+  background: #06ad56;
 }
 
 .btn-generate:disabled,
@@ -1251,7 +1403,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1303,7 +1455,7 @@ onUnmounted(() => {
 }
 
 .btn-close {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
   border: none;
   width: 32px;
@@ -1318,7 +1470,7 @@ onUnmounted(() => {
 }
 
 .btn-close:hover {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .edit-modal-content {
@@ -1358,10 +1510,11 @@ onUnmounted(() => {
   font-size: 0.9rem;
 }
 
-.form-input, .form-textarea {
+.form-input,
+.form-textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #DDD;
+  border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 0.95rem;
   font-family: inherit;
@@ -1369,7 +1522,8 @@ onUnmounted(() => {
   transition: border-color 0.2s;
 }
 
-.form-input:focus, .form-textarea:focus {
+.form-input:focus,
+.form-textarea:focus {
   outline: none;
   border-color: #667eea;
 }
@@ -1382,8 +1536,8 @@ onUnmounted(() => {
 
 .density-btn {
   padding: 0.8rem;
-  background: #F5F5F5;
-  border: 2px solid #DDD;
+  background: #f5f5f5;
+  border: 2px solid #ddd;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
@@ -1392,7 +1546,7 @@ onUnmounted(() => {
 }
 
 .density-btn:hover {
-  background: #E8E8E8;
+  background: #e8e8e8;
 }
 
 .density-btn.active {
@@ -1431,7 +1585,7 @@ onUnmounted(() => {
 }
 
 .npc-item {
-  background: #F9F9F9;
+  background: #f9f9f9;
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 0.8rem;
@@ -1450,7 +1604,7 @@ onUnmounted(() => {
 
 .edit-modal-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid #EEE;
+  border-top: 1px solid #eee;
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
@@ -1458,7 +1612,7 @@ onUnmounted(() => {
 
 .btn-cancel {
   padding: 0.8rem 1.5rem;
-  background: #F5F5F5;
+  background: #f5f5f5;
   color: #666;
   border: none;
   border-radius: 8px;
@@ -1469,7 +1623,7 @@ onUnmounted(() => {
 }
 
 .btn-cancel:hover {
-  background: #E8E8E8;
+  background: #e8e8e8;
 }
 
 .btn-save-modal {
@@ -1521,18 +1675,20 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.btn-pick-avatar, .btn-upload-file {
+.btn-pick-avatar,
+.btn-upload-file {
   padding: 0.6rem 1rem;
-  background: #F5F5F5;
-  border: 1px solid #DDD;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.2s;
 }
 
-.btn-pick-avatar:hover, .btn-upload-file:hover {
-  background: #E8E8E8;
+.btn-pick-avatar:hover,
+.btn-upload-file:hover {
+  background: #e8e8e8;
 }
 
 .emoji-grid {
@@ -1541,7 +1697,7 @@ onUnmounted(() => {
   gap: 0.5rem;
   margin-top: 0.8rem;
   padding: 1rem;
-  background: #F9F9F9;
+  background: #f9f9f9;
   border-radius: 8px;
   max-height: 200px;
   overflow-y: auto;
@@ -1555,7 +1711,7 @@ onUnmounted(() => {
   justify-content: center;
   font-size: 1.5rem;
   background: white;
-  border: 1px solid #DDD;
+  border: 1px solid #ddd;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -1574,23 +1730,26 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
-.current-background, .background-summary {
+.current-background,
+.background-summary {
   padding: 1rem;
-  background: #F8F9FA;
+  background: #f8f9fa;
   border-radius: 8px;
-  border: 1px solid #E9ECEF;
+  border: 1px solid #e9ecef;
 }
 
-.current-background h4, .background-summary h4 {
+.current-background h4,
+.background-summary h4 {
   margin: 0 0 0.5rem 0;
   font-size: 0.9rem;
   color: #495057;
 }
 
-.background-preview, .summary-content {
+.background-preview,
+.summary-content {
   font-size: 0.85rem;
   line-height: 1.5;
-  color: #6C757D;
+  color: #6c757d;
   white-space: pre-wrap;
   max-height: 100px;
   overflow-y: auto;
@@ -1602,7 +1761,8 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.btn-summary, .btn-restore {
+.btn-summary,
+.btn-restore {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 6px;
@@ -1612,31 +1772,31 @@ onUnmounted(() => {
 }
 
 .btn-summary {
-  background: #007BFF;
+  background: #007bff;
   color: white;
 }
 
 .btn-summary:hover:not(:disabled) {
-  background: #0056B3;
+  background: #0056b3;
 }
 
 .btn-summary:disabled {
-  background: #6C757D;
+  background: #6c757d;
   cursor: not-allowed;
 }
 
 .btn-restore {
-  background: #6C757D;
+  background: #6c757d;
   color: white;
 }
 
 .btn-restore:hover {
-  background: #545B62;
+  background: #545b62;
 }
 
 /* NPC头像相关样式 */
 .npc-item {
-  border: 1px solid #E9ECEF;
+  border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -1665,11 +1825,11 @@ onUnmounted(() => {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: #F8F9FA;
+  background: #f8f9fa;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #E9ECEF;
+  border: 2px solid #e9ecef;
   overflow: hidden;
 }
 
@@ -1688,18 +1848,20 @@ onUnmounted(() => {
   gap: 0.3rem;
 }
 
-.btn-pick-avatar-small, .btn-upload-file-small {
+.btn-pick-avatar-small,
+.btn-upload-file-small {
   padding: 0.3rem 0.6rem;
-  background: #F8F9FA;
-  border: 1px solid #DEE2E6;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.75rem;
   transition: all 0.2s;
 }
 
-.btn-pick-avatar-small:hover, .btn-upload-file-small:hover {
-  background: #E9ECEF;
+.btn-pick-avatar-small:hover,
+.btn-upload-file-small:hover {
+  background: #e9ecef;
 }
 
 .npc-emoji-grid {
@@ -1708,7 +1870,7 @@ onUnmounted(() => {
   gap: 0.3rem;
   margin: 0.8rem 0;
   padding: 0.8rem;
-  background: #F8F9FA;
+  background: #f8f9fa;
   border-radius: 6px;
   max-height: 150px;
   overflow-y: auto;
@@ -1722,15 +1884,14 @@ onUnmounted(() => {
   justify-content: center;
   font-size: 1.2rem;
   background: white;
-  border: 1px solid #DEE2E6;
+  border: 1px solid #dee2e6;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .emoji-option-small:hover {
-  background: #E9ECEF;
+  background: #e9ecef;
   transform: scale(1.1);
 }
 </style>
-
