@@ -242,7 +242,7 @@ export default defineEventHandler(async (event) => {
       create: {
         username: "jerry",
         nickname: "Jerry",
-        password: "123123", // 实际应用中应该加密
+        password: "123123",
         avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
         is_admin: true,
       },

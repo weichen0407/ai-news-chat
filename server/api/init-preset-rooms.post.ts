@@ -334,7 +334,7 @@ export default defineEventHandler(async (event) => {
             avatar: npcData.avatar,
             profile: npcData.persona,
           },
-        });
+        }); 
       }
 
       console.log(`NPC创建成功: ${room.name}`);
