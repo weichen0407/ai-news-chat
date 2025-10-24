@@ -11,18 +11,22 @@ RUN apt-get update && apt-get install -y \
 # 设置工作目录
 WORKDIR /app
 
-# 复制package文件
+# 复制package文件和npm配置
 COPY package*.json ./
+COPY .npmrc ./
 
 # 清除缓存并强制重新安装（解决oxc-parser原生模块问题）
 RUN npm cache clean --force && \
     rm -f package-lock.json && \
-    npm install --force --no-optional
+    npm install --force
 
 # 复制所有文件
 COPY . .
 
-# 构建应用（禁用oxc-parser）
+# 强制删除oxc-parser（可选依赖，但有bug）
+RUN rm -rf node_modules/oxc-parser node_modules/.cache/oxc-parser || true
+
+# 构建应用
 RUN npm run build
 
 # 创建数据目录
