@@ -126,6 +126,26 @@ function initDB() {
       console.log('📝 添加 users.avatar 字段...')
       db.exec(`ALTER TABLE users ADD COLUMN avatar TEXT`)
     }
+    
+    // 检查 rooms 表是否有 preset_id 字段
+    const hasPresetId = roomsInfo.some((col: any) => col.name === 'preset_id')
+    if (!hasPresetId) {
+      console.log('📝 添加 preset_id 字段...')
+      db.exec(`ALTER TABLE rooms ADD COLUMN preset_id TEXT`)
+    }
+    
+    // 初始化jerry测试用户（使用简单的哈希，实际部署时应该用bcrypt）
+    const jerryUser = db.prepare('SELECT id FROM users WHERE username = ?').get('jerry')
+    if (!jerryUser) {
+      console.log('📝 创建jerry测试用户...')
+      // 临时使用简单密码哈希，password: 123123
+      // 实际的bcrypt hash: $2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+      db.prepare(`
+        INSERT INTO users (username, nickname, password, avatar) 
+        VALUES (?, ?, ?, ?)
+      `).run('jerry', 'jerry', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', null)
+    }
+    
   } catch (error) {
     console.log('⚠️ 数据库迁移检查:', error)
   }

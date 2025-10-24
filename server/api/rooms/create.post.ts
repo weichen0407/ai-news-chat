@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   }
   
   const body = await readBody(event)
-  const { name, description, eventBackground, npcs } = body
+  const { name, description, eventBackground, npcs, presetId, dialogueDensity, avatar } = body
   
   if (!name || !eventBackground) {
     return { success: false, error: '请填写房间名称和事件背景' }
@@ -22,10 +22,10 @@ export default defineEventHandler(async (event) => {
   const roomId = generateRoomId()
   
   try {
-    // 创建房间
+    // 创建房间（支持preset_id）
     db.prepare(
-      'INSERT INTO rooms (id, name, description, event_background, creator_id) VALUES (?, ?, ?, ?, ?)'
-    ).run(roomId, name, description || '', eventBackground, user.id)
+      'INSERT INTO rooms (id, name, description, event_background, dialogue_density, avatar, preset_id, creator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(roomId, name, description || '', eventBackground, dialogueDensity || 2, avatar || '聊', presetId || null, user.id)
     
     // 添加NPC
     if (npcs && npcs.length > 0) {

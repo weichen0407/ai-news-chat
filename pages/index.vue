@@ -474,47 +474,46 @@ const formatMemberCount = (room) => {
   return `${total}人`;
 };
 
-// 加入预设房间
+// 加入热门房间（避免重复创建）
 const joinPresetRoom = async (roomId) => {
   try {
-    // 直接创建预设房间（包含NPC）
-    const response = await $fetch("/api/rooms/create", {
-      method: "POST",
-      body: {
-        name:
-          presetRooms.value.find((r) => r.id === roomId)?.name || "预设房间",
-        description:
-          presetRooms.value.find((r) => r.id === roomId)?.description || "",
-        eventBackground: getPresetEventBackground(roomId),
-        dialogueDensity: 3,
-        avatar: presetRooms.value.find((r) => r.id === roomId)?.avatar || "💬",
-        npcs: getPresetNPCs(roomId), // 添加预设NPC
-      },
-    });
-
-    if (response.success) {
-      // 创建成功后，自动加入房间
-      const joinResponse = await $fetch("/api/rooms/join", {
+    // 先检查该热门房间是否已存在
+    const checkResponse = await $fetch(`/api/rooms/check-preset?presetId=${roomId}`);
+    
+    let finalRoomId = null;
+    
+    if (checkResponse.exists) {
+      // 房间已存在，直接使用
+      finalRoomId = checkResponse.roomId;
+    } else {
+      // 房间不存在，创建新的
+      const createResponse = await $fetch("/api/rooms/create", {
         method: "POST",
         body: {
-          roomId: response.roomId,
-          roleName: "",
-          roleProfile: "",
+          presetId: roomId, // 添加预设ID标识
+          name: presetRooms.value.find((r) => r.id === roomId)?.name || "热门房间",
+          description: presetRooms.value.find((r) => r.id === roomId)?.description || "",
+          eventBackground: getPresetEventBackground(roomId),
+          dialogueDensity: 3,
+          avatar: presetRooms.value.find((r) => r.id === roomId)?.avatar || "💬",
+          npcs: getPresetNPCs(roomId),
         },
       });
-
-      if (joinResponse.success) {
-        await loadMyRooms();
-        enterRoom(response.roomId);
-      } else {
-        alert("加入房间失败: " + joinResponse.error);
+      
+      if (!createResponse.success) {
+        alert("创建失败: " + createResponse.error);
+        return;
       }
-    } else {
-      alert("创建失败: " + response.error);
+      finalRoomId = createResponse.roomId;
     }
+    
+    // 弹出选择人设的对话框
+    joinRoomId.value = finalRoomId;
+    showJoinRoomModal.value = true;
+    
   } catch (error) {
-    console.error("创建预设房间失败:", error);
-    alert("创建失败，请重试");
+    console.error("加入热门房间失败:", error);
+    alert("操作失败，请重试");
   }
 };
 
