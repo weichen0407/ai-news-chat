@@ -1,15 +1,15 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
-  const roomId = getRouterParam(event, 'id')
-  
+  const roomId = getRouterParam(event, "id");
+
   if (!roomId) {
     throw createError({
       statusCode: 400,
-      statusMessage: '房间ID不能为空'
-    })
+      statusMessage: "房间ID不能为空",
+    });
   }
 
   try {
@@ -22,16 +22,16 @@ export default defineEventHandler(async (event) => {
             id: true,
             username: true,
             nickname: true,
-            avatar: true
-          }
+            avatar: true,
+          },
         },
         npcs: {
           select: {
             id: true,
             name: true,
             avatar: true,
-            profile: true
-          }
+            profile: true,
+          },
         },
         members: {
           include: {
@@ -40,43 +40,43 @@ export default defineEventHandler(async (event) => {
                 id: true,
                 username: true,
                 nickname: true,
-                avatar: true
-              }
-            }
-          }
-        }
-      }
-    })
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
     if (!room) {
       throw createError({
         statusCode: 404,
-        statusMessage: '房间不存在'
-      })
+        statusMessage: "房间不存在",
+      });
     }
 
     // 获取当前用户信息
-    const currentUser = await getCurrentUser(event)
-    const isCreator = currentUser && room.creator_id === currentUser.id
+    const currentUser = await getCurrentUser(event);
+    const isCreator = currentUser && room.creator_id === currentUser.id;
 
     // 格式化成员信息
-    const members = room.members.map(member => ({
+    const members = room.members.map((member) => ({
       id: member.user.id,
       username: member.user.username,
       nickname: member.user.nickname,
       avatar: member.user.avatar,
       role_name: member.role_name,
       role_profile: member.role_profile,
-      joined_at: member.created_at
-    }))
+      joined_at: member.created_at,
+    }));
 
     // 格式化NPC信息
-    const npcs = room.npcs.map(npc => ({
+    const npcs = room.npcs.map((npc) => ({
       id: npc.id,
       name: npc.name,
       avatar: npc.avatar,
-      profile: npc.profile
-    }))
+      profile: npc.profile,
+    }));
 
     return {
       success: true,
@@ -88,22 +88,22 @@ export default defineEventHandler(async (event) => {
         event_background: room.event_background,
         dialogue_density: room.dialogue_density,
         created_at: room.created_at,
-        creator: room.creator
+        creator: room.creator,
       },
       npcs,
       members,
       isCreator,
       memberCount: members.length,
       npcCount: npcs.length,
-      totalCount: members.length + npcs.length
-    }
+      totalCount: members.length + npcs.length,
+    };
   } catch (error) {
-    console.error('获取房间信息失败:', error)
+    console.error("获取房间信息失败:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: '获取房间信息失败'
-    })
+      statusMessage: "获取房间信息失败",
+    });
   } finally {
-    await prisma.$disconnect()
+    await prisma.$disconnect();
   }
-})
+});

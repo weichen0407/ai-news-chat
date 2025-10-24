@@ -1,14 +1,15 @@
-import { PrismaClient } from '@prisma/client'
-import { getCurrentUser } from '~/server/utils/auth'
+import { PrismaClient } from "@prisma/client";
+import { getCurrentUser } from "~/server/utils/auth";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 const presetRooms = [
   {
-    id: 'DRAMA1',
-    name: '王宝强离婚风波',
-    description: '2016年娱乐圈最轰动的离婚事件，马蓉出轨经纪人宋喆，王宝强深夜发声明',
-    avatar: '💔',
+    id: "DRAMA1",
+    name: "王宝强离婚风波",
+    description:
+      "2016年娱乐圈最轰动的离婚事件，马蓉出轨经纪人宋喆，王宝强深夜发声明",
+    avatar: "💔",
     event_background: `2016年8月14日凌晨，王宝强在微博发布离婚声明，指控妻子马蓉与经纪人宋喆存在婚外不正当两性关系，严重伤害了婚姻、破坏了家庭。这一声明瞬间引爆网络，成为当年最轰动的娱乐事件。
 
 主要人物：
@@ -28,32 +29,40 @@ const presetRooms = [
     dialogue_density: 3,
     npcs: [
       {
-        name: '王宝强',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        persona: '憨厚老实，说话直爽，对家庭忠诚，但被背叛后非常愤怒和痛苦。说话带有河北口音，经常用"俺"这个词。'
+        name: "王宝强",
+        avatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        persona:
+          '憨厚老实，说话直爽，对家庭忠诚，但被背叛后非常愤怒和痛苦。说话带有河北口音，经常用"俺"这个词。',
       },
       {
-        name: '马蓉',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '外表清纯，内心复杂，善于伪装。被指控出轨后极力否认，声称是王宝强家暴。说话温柔但带有心机。'
+        name: "马蓉",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "外表清纯，内心复杂，善于伪装。被指控出轨后极力否认，声称是王宝强家暴。说话温柔但带有心机。",
       },
       {
-        name: '宋喆',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-        persona: '表面忠诚的经纪人，实际与马蓉有不正当关系。被曝光后极力狡辩，但最终承认错误。'
+        name: "宋喆",
+        avatar:
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "表面忠诚的经纪人，实际与马蓉有不正当关系。被曝光后极力狡辩，但最终承认错误。",
       },
       {
-        name: '张起淮律师',
-        avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop&crop=face',
-        persona: '经验丰富的离婚律师，为王宝强代理案件。说话专业严谨，逻辑清晰。'
-      }
-    ]
+        name: "张起淮律师",
+        avatar:
+          "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "经验丰富的离婚律师，为王宝强代理案件。说话专业严谨，逻辑清晰。",
+      },
+    ],
   },
   {
-    id: 'DRAMA2',
-    name: '特朗普vs拜登大选',
-    description: '2020年美国大选，特朗普与拜登的激烈对决，争议不断',
-    avatar: '🗳️',
+    id: "DRAMA2",
+    name: "特朗普vs拜登大选",
+    description: "2020年美国大选，特朗普与拜登的激烈对决，争议不断",
+    avatar: "🗳️",
     event_background: `2020年美国大选是历史上最激烈和争议的总统选举之一。现任总统特朗普寻求连任，而前副总统拜登代表民主党挑战。
 
 主要人物：
@@ -73,32 +82,38 @@ const presetRooms = [
     dialogue_density: 4,
     npcs: [
       {
-        name: '特朗普',
-        avatar: 'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=100&h=100&fit=crop&crop=face',
-        persona: '说话夸张，喜欢用"最棒的"、"难以置信"等词汇。经常攻击对手，声称选举舞弊。说话风格直接，有时粗鲁。'
+        name: "特朗普",
+        avatar:
+          "https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=100&h=100&fit=crop&crop=face",
+        persona:
+          '说话夸张，喜欢用"最棒的"、"难以置信"等词汇。经常攻击对手，声称选举舞弊。说话风格直接，有时粗鲁。',
       },
       {
-        name: '拜登',
-        avatar: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=100&h=100&fit=crop&crop=face',
-        persona: '说话温和，强调团结和治愈。经常提到"美国灵魂"和"民主价值"。说话有时会停顿或重复。'
+        name: "拜登",
+        avatar:
+          "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=100&h=100&fit=crop&crop=face",
+        persona:
+          '说话温和，强调团结和治愈。经常提到"美国灵魂"和"民主价值"。说话有时会停顿或重复。',
       },
       {
-        name: '哈里斯',
-        avatar: 'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=100&h=100&fit=crop&crop=face',
-        persona: '说话有力，强调女权和少数族裔权利。经常用"让我们谈谈"开头。'
+        name: "哈里斯",
+        avatar:
+          "https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=100&h=100&fit=crop&crop=face",
+        persona: '说话有力，强调女权和少数族裔权利。经常用"让我们谈谈"开头。',
       },
       {
-        name: 'CNN记者',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        persona: '专业记者，提问尖锐，追求真相。经常质疑政客的言论。'
-      }
-    ]
+        name: "CNN记者",
+        avatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        persona: "专业记者，提问尖锐，追求真相。经常质疑政客的言论。",
+      },
+    ],
   },
   {
-    id: 'DRAMA3',
-    name: '甄嬛传后宫争宠',
-    description: '清朝后宫妃嫔争宠，甄嬛从纯真少女到权谋女王的蜕变',
-    avatar: '👑',
+    id: "DRAMA3",
+    name: "甄嬛传后宫争宠",
+    description: "清朝后宫妃嫔争宠，甄嬛从纯真少女到权谋女王的蜕变",
+    avatar: "👑",
     event_background: `雍正年间，后宫佳丽三千，争宠不断。甄嬛初入宫时天真烂漫，但很快被卷入后宫的权力斗争。
 
 主要人物：
@@ -118,32 +133,38 @@ const presetRooms = [
     dialogue_density: 3,
     npcs: [
       {
-        name: '甄嬛',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '初入宫时天真烂漫，说话温柔。后来变得聪明机智，说话带有深意，善于用诗词表达情感。'
+        name: "甄嬛",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "初入宫时天真烂漫，说话温柔。后来变得聪明机智，说话带有深意，善于用诗词表达情感。",
       },
       {
-        name: '华妃',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '嚣张跋扈，说话直接，经常威胁别人。喜欢炫耀自己的地位和宠爱。'
+        name: "华妃",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona: "嚣张跋扈，说话直接，经常威胁别人。喜欢炫耀自己的地位和宠爱。",
       },
       {
-        name: '皇后',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '表面贤淑，说话温和有礼，但内心狠毒。经常用关心的话语来掩盖真实意图。'
+        name: "皇后",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "表面贤淑，说话温和有礼，但内心狠毒。经常用关心的话语来掩盖真实意图。",
       },
       {
-        name: '安陵容',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '出身卑微，说话小心翼翼，内心自卑。后来变得嫉妒和狠毒。'
-      }
-    ]
+        name: "安陵容",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona: "出身卑微，说话小心翼翼，内心自卑。后来变得嫉妒和狠毒。",
+      },
+    ],
   },
   {
-    id: 'DRAMA4',
-    name: '复仇者联盟内战',
-    description: '超级英雄因理念分歧而分裂，钢铁侠vs美国队长的终极对决',
-    avatar: '⚔️',
+    id: "DRAMA4",
+    name: "复仇者联盟内战",
+    description: "超级英雄因理念分歧而分裂，钢铁侠vs美国队长的终极对决",
+    avatar: "⚔️",
     event_background: `《美国队长3：内战》事件。由于超级英雄的行动造成了大量平民伤亡，联合国要求所有超级英雄签署《索科维亚协议》，接受政府监管。
 
 主要人物：
@@ -164,32 +185,39 @@ const presetRooms = [
     dialogue_density: 4,
     npcs: [
       {
-        name: '钢铁侠',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        persona: '说话幽默，经常开玩笑，但内心有责任感。认为超级英雄需要被监管，避免再次造成伤害。'
+        name: "钢铁侠",
+        avatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "说话幽默，经常开玩笑，但内心有责任感。认为超级英雄需要被监管，避免再次造成伤害。",
       },
       {
-        name: '美国队长',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        persona: '说话正直，坚持原则。认为政府监管会限制超级英雄的自由，无法及时拯救世界。'
+        name: "美国队长",
+        avatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "说话正直，坚持原则。认为政府监管会限制超级英雄的自由，无法及时拯救世界。",
       },
       {
-        name: '冬兵',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        persona: '说话简洁，内心痛苦。被洗脑控制时做了很多坏事，现在努力赎罪。'
+        name: "冬兵",
+        avatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        persona: "说话简洁，内心痛苦。被洗脑控制时做了很多坏事，现在努力赎罪。",
       },
       {
-        name: '黑寡妇',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '说话机智，善于分析。在钢铁侠和美国队长之间左右为难，试图调解矛盾。'
-      }
-    ]
+        name: "黑寡妇",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "说话机智，善于分析。在钢铁侠和美国队长之间左右为难，试图调解矛盾。",
+      },
+    ],
   },
   {
-    id: 'DRAMA5',
-    name: '甄嬛传现代版',
-    description: '现代职场版甄嬛传，大公司内部权力斗争和办公室政治',
-    avatar: '💼',
+    id: "DRAMA5",
+    name: "甄嬛传现代版",
+    description: "现代职场版甄嬛传，大公司内部权力斗争和办公室政治",
+    avatar: "💼",
     event_background: `某知名互联网公司内部，CEO突然宣布退休，引发了一场激烈的权力争夺战。各部门总监为了争夺CEO职位，展开了激烈的竞争。
 
 主要人物：
@@ -209,52 +237,60 @@ const presetRooms = [
     dialogue_density: 3,
     npcs: [
       {
-        name: '甄嬛',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '初入公司时天真，说话直接。后来变得聪明，说话带有策略性，善于用数据说话。'
+        name: "甄嬛",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "初入公司时天真，说话直接。后来变得聪明，说话带有策略性，善于用数据说话。",
       },
       {
-        name: '华妃',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '性格强势，说话咄咄逼人。经常炫耀自己的业绩，喜欢威胁竞争对手。'
+        name: "华妃",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "性格强势，说话咄咄逼人。经常炫耀自己的业绩，喜欢威胁竞争对手。",
       },
       {
-        name: '皇后',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '表面和善，说话温和，但内心狠毒。经常用关心的话语来掩盖真实意图。'
+        name: "皇后",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona:
+          "表面和善，说话温和，但内心狠毒。经常用关心的话语来掩盖真实意图。",
       },
       {
-        name: '安陵容',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        persona: '出身普通，说话小心翼翼，内心自卑。后来变得嫉妒和狠毒。'
-      }
-    ]
-  }
-]
+        name: "安陵容",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        persona: "出身普通，说话小心翼翼，内心自卑。后来变得嫉妒和狠毒。",
+      },
+    ],
+  },
+];
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('开始创建预设房间...')
+    console.log("开始创建预设房间...");
 
     // 创建admin用户
     const adminUser = await prisma.user.upsert({
-      where: { username: 'jerry' },
+      where: { username: "jerry" },
       update: {},
       create: {
-        username: 'jerry',
-        nickname: 'Jerry',
-        password: '123123', // 实际应用中应该加密
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        is_admin: true
-      }
-    })
+        username: "jerry",
+        nickname: "Jerry",
+        password: "123123", // 实际应用中应该加密
+        avatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        is_admin: true,
+      },
+    });
 
-    console.log('Admin用户创建成功:', adminUser.username)
+    console.log("Admin用户创建成功:", adminUser.username);
 
     // 创建预设房间
     for (const roomData of presetRooms) {
-      const { npcs, ...roomInfo } = roomData
-      
+      const { npcs, ...roomInfo } = roomData;
+
       // 创建房间
       const room = await prisma.room.upsert({
         where: { id: roomData.id },
@@ -264,7 +300,7 @@ export default defineEventHandler(async (event) => {
           avatar: roomInfo.avatar,
           event_background: roomInfo.event_background,
           dialogue_density: roomInfo.dialogue_density,
-          creator_id: adminUser.id
+          creator_id: adminUser.id,
         },
         create: {
           id: roomData.id,
@@ -273,51 +309,51 @@ export default defineEventHandler(async (event) => {
           avatar: roomInfo.avatar,
           event_background: roomInfo.event_background,
           dialogue_density: roomInfo.dialogue_density,
-          creator_id: adminUser.id
-        }
-      })
+          creator_id: adminUser.id,
+        },
+      });
 
-      console.log(`房间创建成功: ${room.name}`)
+      console.log(`房间创建成功: ${room.name}`);
 
       // 创建NPC
       for (const npcData of npcs) {
         await prisma.npc.upsert({
-          where: { 
+          where: {
             room_id_name: {
               room_id: room.id,
-              name: npcData.name
-            }
+              name: npcData.name,
+            },
           },
           update: {
             avatar: npcData.avatar,
-            profile: npcData.persona
+            profile: npcData.persona,
           },
           create: {
             room_id: room.id,
             name: npcData.name,
             avatar: npcData.avatar,
-            profile: npcData.persona
-          }
-        })
+            profile: npcData.persona,
+          },
+        });
       }
 
-      console.log(`NPC创建成功: ${room.name}`)
+      console.log(`NPC创建成功: ${room.name}`);
     }
 
-    console.log('所有预设房间创建完成！')
-    
+    console.log("所有预设房间创建完成！");
+
     return {
       success: true,
-      message: '预设房间创建成功',
-      rooms: presetRooms.map(r => r.name)
-    }
+      message: "预设房间创建成功",
+      rooms: presetRooms.map((r) => r.name),
+    };
   } catch (error) {
-    console.error('创建预设房间失败:', error)
+    console.error("创建预设房间失败:", error);
     return {
       success: false,
-      error: error.message
-    }
+      error: error.message,
+    };
   } finally {
-    await prisma.$disconnect()
+    await prisma.$disconnect();
   }
-})
+});
