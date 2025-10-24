@@ -45,39 +45,39 @@
 
       <!-- Tab内容 -->
       <div class="tab-content">
-         <!-- 我的群聊列表 -->
-         <div v-if="activeTab === 'my-rooms'" class="room-list">
-           <!-- 预设房间 -->
-           <div class="preset-rooms-section">
-             <h3 class="section-title">🎭 热门剧本</h3>
-             <div class="preset-rooms-grid">
-               <div
-                 v-for="room in presetRooms"
-                 :key="room.id"
-                 class="preset-room-card"
-                 :data-avatar="room.avatar"
-                 @click="joinPresetRoom(room.id)"
-               >
-                 <div class="preset-room-content">
-                   <h4>{{ room.name }}</h4>
-                   <p>{{ room.description }}</p>
-                   <div class="preset-room-meta">
-                     <span class="room-type">{{ room.type }}</span>
-                     <span class="room-players">{{ room.players }}人</span>
-                   </div>
-                 </div>
-               </div>
-             </div>
-           </div>
+        <!-- 我的群聊列表 -->
+        <div v-if="activeTab === 'my-rooms'" class="room-list">
+          <!-- 预设房间 -->
+          <div class="preset-rooms-section">
+            <h3 class="section-title">🎭 热门剧本</h3>
+            <div class="preset-rooms-grid">
+              <div
+                v-for="room in presetRooms"
+                :key="room.id"
+                class="preset-room-card"
+                :data-avatar="room.avatar"
+                @click="joinPresetRoom(room.id)"
+              >
+                <div class="preset-room-content">
+                  <h4>{{ room.name }}</h4>
+                  <p>{{ room.description }}</p>
+                  <div class="preset-room-meta">
+                    <span class="room-type">{{ room.type }}</span>
+                    <span class="room-players">{{ room.players }}人</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-           <!-- 我的群聊 -->
-           <div class="my-rooms-section">
-             <h3 class="section-title">我的群聊</h3>
-             <div v-if="myRooms.length === 0" class="empty-state">
-               <div class="empty-icon">📭</div>
-               <p>还没有加入任何群聊</p>
-               <p class="hint">点击上方按钮创建或加入群聊</p>
-             </div>
+          <!-- 我的群聊 -->
+          <div class="my-rooms-section">
+            <h3 class="section-title">我的群聊</h3>
+            <div v-if="myRooms.length === 0" class="empty-state">
+              <div class="empty-icon">📭</div>
+              <p>还没有加入任何群聊</p>
+              <p class="hint">点击上方按钮创建或加入群聊</p>
+            </div>
 
             <div
               v-for="room in myRooms"
@@ -89,13 +89,17 @@
               <div class="room-content">
                 <div class="room-header">
                   <h3>{{ room.name }}</h3>
-                  <span class="room-time">{{ formatDate(room.created_at) }}</span>
+                  <span class="room-time">{{
+                    formatDate(room.created_at)
+                  }}</span>
                 </div>
                 <div class="room-footer">
                   <div class="last-message">
                     {{ room.last_message || "还没有消息" }}
                   </div>
-                  <span class="room-members">{{ formatMemberCount(room) }}</span>
+                  <span class="room-members">{{
+                    formatMemberCount(room)
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -274,47 +278,46 @@ const isFullscreen = ref(true); // 默认全屏（电脑模式）
 // 预设房间数据
 const presetRooms = ref([
   {
-    id: 'DRAMA1',
-    name: '王宝强离婚风波',
-    description: '2016年娱乐圈最轰动的离婚事件',
-    avatar: '💔',
-    type: '娱乐',
-    players: 4
+    id: "DRAMA1",
+    name: "王宝强离婚风波",
+    description: "2016年娱乐圈最轰动的离婚事件",
+    avatar: "💔",
+    type: "娱乐",
+    players: 4,
   },
   {
-    id: 'DRAMA2',
-    name: '特朗普vs拜登大选',
-    description: '2020年美国大选激烈对决',
-    avatar: '🗳️',
-    type: '政治',
-    players: 4
+    id: "DRAMA2",
+    name: "特朗普vs拜登大选",
+    description: "2020年美国大选激烈对决",
+    avatar: "🗳️",
+    type: "政治",
+    players: 4,
   },
   {
-    id: 'DRAMA3',
-    name: '甄嬛传后宫争宠',
-    description: '清朝后宫妃嫔争宠大戏',
-    avatar: '👑',
-    type: '古装',
-    players: 4
+    id: "DRAMA3",
+    name: "甄嬛传后宫争宠",
+    description: "清朝后宫妃嫔争宠大戏",
+    avatar: "👑",
+    type: "古装",
+    players: 4,
   },
   {
-    id: 'DRAMA4',
-    name: '复仇者联盟内战',
-    description: '超级英雄因理念分歧而分裂',
-    avatar: '⚔️',
-    type: '科幻',
-    players: 4
+    id: "DRAMA4",
+    name: "复仇者联盟内战",
+    description: "超级英雄因理念分歧而分裂",
+    avatar: "⚔️",
+    type: "科幻",
+    players: 4,
   },
   {
-    id: 'DRAMA5',
-    name: '甄嬛传现代版',
-    description: '现代职场版甄嬛传',
-    avatar: '💼',
-    type: '职场',
-    players: 4
-  }
+    id: "DRAMA5",
+    name: "甄嬛传现代版",
+    description: "现代职场版甄嬛传",
+    avatar: "💼",
+    type: "职场",
+    players: 4,
+  },
 ]);
-
 
 const showCreateRoomModal = ref(false);
 const showJoinRoomModal = ref(false);
@@ -474,27 +477,26 @@ const formatMemberCount = (room) => {
 // 加入预设房间
 const joinPresetRoom = async (roomId) => {
   try {
-    const response = await $fetch('/api/rooms/join', {
-      method: 'POST',
+    const response = await $fetch("/api/rooms/join", {
+      method: "POST",
       body: {
         roomId: roomId,
-        roleName: '',
-        roleProfile: ''
-      }
+        roleName: "",
+        roleProfile: "",
+      },
     });
-    
+
     if (response.success) {
       await loadMyRooms();
       enterRoom(roomId);
     } else {
-      alert('加入失败: ' + response.error);
+      alert("加入失败: " + response.error);
     }
   } catch (error) {
-    console.error('加入预设房间失败:', error);
-    alert('加入失败，请重试');
+    console.error("加入预设房间失败:", error);
+    alert("加入失败，请重试");
   }
 };
-
 </script>
 
 <style scoped>
@@ -742,7 +744,6 @@ const joinPresetRoom = async (roomId) => {
   padding-top: 1rem;
   border-top: 1px solid #f0f0f0;
 }
-
 
 .room-card {
   background: white;
