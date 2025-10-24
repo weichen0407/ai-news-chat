@@ -12,7 +12,9 @@ COPY package*.json ./
 COPY .npmrc ./
 
 # 安装依赖
-RUN npm ci --legacy-peer-deps
+RUN npm config set ignore-optional true && \
+    npm config set force true && \
+    npm ci --legacy-peer-deps --force
 
 # 复制所有文件
 COPY . .
