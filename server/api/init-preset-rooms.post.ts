@@ -338,6 +338,25 @@ export default defineEventHandler(async (event) => {
       }
 
       console.log(`NPC创建成功: ${room.name}`);
+
+      // 让jerry用户加入这个房间
+      await prisma.roomMember.upsert({
+        where: {
+          room_id_user_id: {
+            room_id: room.id,
+            user_id: adminUser.id,
+          },
+        },
+        update: {},
+        create: {
+          room_id: room.id,
+          user_id: adminUser.id,
+          role_name: "群主",
+          role_profile: "房间创建者和管理员",
+        },
+      });
+
+      console.log(`Jerry已加入房间: ${room.name}`);
     }
 
     console.log("所有预设房间创建完成！");
