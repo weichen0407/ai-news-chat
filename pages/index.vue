@@ -385,8 +385,8 @@ const formatMemberCount = (room) => {
 .app-container {
   width: 100%;
   max-width: 420px;
-  height: 90vh;
-  max-height: 844px;
+  height: 95vh;
+  max-height: 900px;
   background: #EDEDED;
   display: flex;
   flex-direction: column;

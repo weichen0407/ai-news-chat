@@ -27,18 +27,16 @@
 
     <!-- 聊天消息区 -->
     <div class="messages-container" ref="messagesContainer">
-      <div
+      <TypingMessage
         v-for="(msg, index) in messages"
         :key="index"
-        :class="['message', msg.sender_type === 'user' && msg.sender_id === currentUserId ? 'mine' : 'other']"
-      >
-        <img :src="msg.avatar || '/avatars/placeholder.svg'" :alt="msg.sender_name" class="avatar" />
-        <div class="message-content">
-          <div class="sender-name">{{ msg.sender_name }}</div>
-          <div class="message-bubble">{{ msg.content }}</div>
-          <div class="message-time">{{ formatTime(msg.created_at) }}</div>
-        </div>
-      </div>
+        :content="msg.content"
+        :sender-name="msg.sender_name"
+        :avatar="msg.avatar || '/avatars/placeholder.svg'"
+        :time="formatTime(msg.created_at)"
+        :message-class="msg.sender_type === 'user' && msg.sender_id === currentUserId ? 'mine' : 'other'"
+        :delay="50"
+      />
 
       <!-- 打字中提示 -->
       <div v-if="typingNPC" class="typing-indicator">
@@ -192,12 +190,30 @@
             
             <div class="form-group">
               <label>事件背景（主导剧情）</label>
-              <textarea 
-                v-model="editData.event_background" 
-                rows="4" 
-                class="form-textarea"
-                placeholder="描述故事背景和主要剧情线..."
-              ></textarea>
+              <div class="background-editor">
+                <div class="current-background" v-if="originalEventBackground">
+                  <h4>📖 当前剧情背景：</h4>
+                  <div class="background-preview">{{ originalEventBackground }}</div>
+                </div>
+                <div class="background-summary" v-if="storySummary">
+                  <h4>📝 剧情发展摘要：</h4>
+                  <div class="summary-content">{{ storySummary }}</div>
+                </div>
+                <textarea 
+                  v-model="editData.event_background" 
+                  rows="4" 
+                  class="form-textarea"
+                  placeholder="描述故事背景和主要剧情线..."
+                ></textarea>
+                <div class="background-actions">
+                  <button @click="generateStorySummary" class="btn-summary" :disabled="isGeneratingSummary">
+                    {{ isGeneratingSummary ? '生成中...' : '📊 生成剧情摘要' }}
+                  </button>
+                  <button @click="restoreOriginalBackground" class="btn-restore">
+                    🔄 恢复原剧情
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -240,7 +256,34 @@
             <h3>👥 NPC角色管理</h3>
             
             <div v-for="(npc, index) in editData.npcs" :key="index" class="npc-item">
-              <div class="npc-name">{{ npc.name }}</div>
+              <div class="npc-header">
+                <div class="npc-name">{{ npc.name }}</div>
+                <div class="npc-avatar-section">
+                  <div class="npc-avatar-display">
+                    <img v-if="npc.avatar && !npc.avatar.startsWith('data:')" :src="npc.avatar" :alt="npc.name" class="npc-avatar-img" />
+                    <span v-else class="npc-avatar-emoji">{{ npc.avatar || '👤' }}</span>
+                  </div>
+                  <div class="npc-avatar-buttons">
+                    <button @click="showNPCAvatarPicker = index" class="btn-pick-avatar-small">
+                      Emoji
+                    </button>
+                    <label class="btn-upload-file-small">
+                      图片
+                      <input type="file" accept="image/*" @change="uploadNPCAvatar($event, index)" hidden />
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div v-if="showNPCAvatarPicker === index" class="npc-emoji-grid">
+                <button 
+                  v-for="emoji in avatarEmojis" 
+                  :key="emoji"
+                  @click="selectNPCAvatar(emoji, index)"
+                  class="emoji-option-small"
+                >
+                  {{ emoji }}
+                </button>
+              </div>
               <textarea 
                 v-model="npc.persona" 
                 rows="2" 
@@ -265,6 +308,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import TypingMessage from '~/components/TypingMessage.vue'
 
 definePageMeta({
   middleware: 'auth'
@@ -296,6 +340,10 @@ const messagesContainer = ref(null)
 const showSettings = ref(false)
 const showEditModal = ref(false)
 const showAvatarPicker = ref(false)
+const showNPCAvatarPicker = ref(null)
+const originalEventBackground = ref('')
+const storySummary = ref('')
+const isGeneratingSummary = ref(false)
 const editData = ref({
   name: '',
   description: '',
@@ -336,6 +384,9 @@ const loadRoomInfo = async () => {
       members.value = response.members
       isCreator.value = response.isCreator
       console.log('🔧 isCreator:', isCreator.value, 'Room:', roomInfo.value?.name)
+      
+      // 保存原始剧情背景
+      originalEventBackground.value = response.room.event_background || ''
       
       // 初始化编辑数据
       editData.value = {
@@ -476,6 +527,62 @@ const uploadRoomAvatar = (event) => {
     }
     reader.readAsDataURL(file)
   }
+}
+
+// NPC头像相关方法
+const selectNPCAvatar = (emoji, index) => {
+  editData.value.npcs[index].avatar = emoji
+  showNPCAvatarPicker.value = null
+}
+
+const uploadNPCAvatar = (event, index) => {
+  const file = event.target.files[0]
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      editData.value.npcs[index].avatar = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+// 剧情摘要相关方法
+const generateStorySummary = async () => {
+  if (isGeneratingSummary.value) return
+  
+  isGeneratingSummary.value = true
+  try {
+    // 获取最近的聊天记录
+    const recentMessages = messages.value.slice(-20).map(msg => 
+      `${msg.sender_name}: ${msg.content}`
+    ).join('\n')
+    
+    const response = await $fetch('/api/messages/generate-story-summary', {
+      method: 'POST',
+      body: {
+        roomId: roomId,
+        originalBackground: originalEventBackground.value,
+        currentBackground: editData.value.event_background,
+        recentMessages: recentMessages
+      }
+    })
+    
+    if (response.success) {
+      storySummary.value = response.summary
+    } else {
+      alert('生成摘要失败: ' + response.error)
+    }
+  } catch (error) {
+    console.error('生成摘要失败:', error)
+    alert('生成摘要时出错')
+  } finally {
+    isGeneratingSummary.value = false
+  }
+}
+
+const restoreOriginalBackground = () => {
+  editData.value.event_background = originalEventBackground.value
+  storySummary.value = ''
 }
 
 const saveSettings = async () => {
@@ -718,8 +825,8 @@ onUnmounted(() => {
 .chat-container {
   width: 100%;
   max-width: 420px;
-  height: 90vh;
-  max-height: 844px;
+  height: 95vh;
+  max-height: 900px;
   display: flex;
   flex-direction: column;
   background: #EDEDED;
@@ -1458,6 +1565,172 @@ onUnmounted(() => {
   transform: scale(1.1);
   border-color: #667eea;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* 剧情背景编辑器样式 */
+.background-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.current-background, .background-summary {
+  padding: 1rem;
+  background: #F8F9FA;
+  border-radius: 8px;
+  border: 1px solid #E9ECEF;
+}
+
+.current-background h4, .background-summary h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.background-preview, .summary-content {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #6C757D;
+  white-space: pre-wrap;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.background-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-summary, .btn-restore {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.btn-summary {
+  background: #007BFF;
+  color: white;
+}
+
+.btn-summary:hover:not(:disabled) {
+  background: #0056B3;
+}
+
+.btn-summary:disabled {
+  background: #6C757D;
+  cursor: not-allowed;
+}
+
+.btn-restore {
+  background: #6C757D;
+  color: white;
+}
+
+.btn-restore:hover {
+  background: #545B62;
+}
+
+/* NPC头像相关样式 */
+.npc-item {
+  border: 1px solid #E9ECEF;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: white;
+}
+
+.npc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.npc-name {
+  font-weight: 600;
+  color: #495057;
+}
+
+.npc-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.npc-avatar-display {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #F8F9FA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #E9ECEF;
+  overflow: hidden;
+}
+
+.npc-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.npc-avatar-emoji {
+  font-size: 1.5rem;
+}
+
+.npc-avatar-buttons {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.btn-pick-avatar-small, .btn-upload-file-small {
+  padding: 0.3rem 0.6rem;
+  background: #F8F9FA;
+  border: 1px solid #DEE2E6;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+}
+
+.btn-pick-avatar-small:hover, .btn-upload-file-small:hover {
+  background: #E9ECEF;
+}
+
+.npc-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.3rem;
+  margin: 0.8rem 0;
+  padding: 0.8rem;
+  background: #F8F9FA;
+  border-radius: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.emoji-option-small {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: white;
+  border: 1px solid #DEE2E6;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.emoji-option-small:hover {
+  background: #E9ECEF;
+  transform: scale(1.1);
 }
 </style>
 

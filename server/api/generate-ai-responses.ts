@@ -1,38 +1,42 @@
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
-  const body = await readBody(event)
-  
-  const { characters, eventBackground, chatHistory } = body
-  
+  const config = useRuntimeConfig();
+  const body = await readBody(event);
+
+  const { characters, eventBackground, chatHistory } = body;
+
   if (!characters || !chatHistory || chatHistory.length === 0) {
     return {
       success: false,
-      error: '缺少必要信息'
-    }
+      error: "缺少必要信息",
+    };
   }
-  
+
   try {
     // 构建聊天历史
-    const historyText = chatHistory.map((msg: any) => {
-      return `${msg.name}: ${msg.text}`
-    }).join('\n')
-    
+    const historyText = chatHistory
+      .map((msg: any) => {
+        return `${msg.name}: ${msg.text}`;
+      })
+      .join("\n");
+
     // 获取最后一条消息
-    const lastMessage = chatHistory[chatHistory.length - 1]
-    
+    const lastMessage = chatHistory[chatHistory.length - 1];
+
     const apiKey = process.env.DEEPSEEK_API_KEY || config.deepseekApiKey;
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: `你是一个对话生成器。根据聊天历史和角色设定，判断哪些AI角色会回复最新的消息，并生成他们的回复。
+    const response = await fetch(
+      "https://api.deepseek.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            {
+              role: "system",
+              content: `你是一个对话生成器。根据聊天历史和角色设定，判断哪些AI角色会回复最新的消息，并生成他们的回复。
 
 角色信息：
 - 王宝强：${characters.wangbaoqiang.profile}
@@ -54,64 +58,64 @@ export default defineEventHandler(async (event) => {
 注意：
 - character只能是：wangbaoqiang、marong、songzhe
 - 可以只有1个回复，也可以有2个，根据情况决定
-- 如果消息不值得回复或针对性不强，可以返回空数组[]`
-          },
-          {
-            role: 'user',
-            content: `聊天历史：
+- 如果消息不值得回复或针对性不强，可以返回空数组[]`,
+            },
+            {
+              role: "user",
+              content: `聊天历史：
 ${historyText}
 
 最新消息是：${lastMessage.name}说"${lastMessage.text}"
 
-请判断哪些AI角色会回复，并生成回复内容（JSON格式）：`
-          }
-        ],
-        temperature: 0.8,
-        max_tokens: 500
-      })
-    })
-    
+请判断哪些AI角色会回复，并生成回复内容（JSON格式）：`,
+            },
+          ],
+          temperature: 0.8,
+          max_tokens: 500,
+        }),
+      }
+    );
+
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error('DeepSeek API Error:', errorText)
+      const errorText = await response.text();
+      console.error("DeepSeek API Error:", errorText);
       return {
         success: false,
-        error: 'AI服务调用失败'
-      }
+        error: "AI服务调用失败",
+      };
     }
-    
-    const data = await response.json()
-    const responseText = data.choices[0]?.message?.content?.trim() || '[]'
-    
+
+    const data = await response.json();
+    const responseText = data.choices[0]?.message?.content?.trim() || "[]";
+
     // 解析JSON响应
-    let responses = []
+    let responses = [];
     try {
       // 尝试提取JSON
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/)
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        const parsedResponses = JSON.parse(jsonMatch[0])
-        
+        const parsedResponses = JSON.parse(jsonMatch[0]);
+
         // 转换格式并添加角色名称
         responses = parsedResponses.map((resp: any) => ({
           characterKey: resp.character,
-          name: characters[resp.character]?.name || '未知',
-          message: resp.message
-        }))
+          name: characters[resp.character]?.name || "未知",
+          message: resp.message,
+        }));
       }
     } catch (error) {
-      console.error('JSON解析失败:', error, responseText)
+      console.error("JSON解析失败:", error, responseText);
     }
-    
+
     return {
       success: true,
-      responses
-    }
+      responses,
+    };
   } catch (error) {
-    console.error('生成AI回复失败:', error)
+    console.error("生成AI回复失败:", error);
     return {
       success: false,
-      error: '生成回复时出错，请重试'
-    }
+      error: "生成回复时出错，请重试",
+    };
   }
-})
-
+});
