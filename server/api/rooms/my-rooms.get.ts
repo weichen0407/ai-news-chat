@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       (SELECT COUNT(DISTINCT user_id) FROM room_members WHERE room_id = r.id) as member_count,
       (SELECT COUNT(*) FROM npcs WHERE room_id = r.id) as npc_count,
       (SELECT COUNT(*) FROM messages WHERE room_id = r.id) as message_count,
-      (SELECT content FROM messages WHERE room_id = r.id ORDER BY created_at DESC LIMIT 1) as last_message,
+      (SELECT sender_name || ': ' || content FROM messages WHERE room_id = r.id ORDER BY created_at DESC LIMIT 1) as last_message,
       (SELECT COUNT(*) FROM messages 
        WHERE room_id = r.id 
        AND created_at > COALESCE(rm.last_read_at, '2000-01-01')

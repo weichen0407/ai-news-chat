@@ -614,6 +614,9 @@ const avatarEmojis = [
   "🎢",
 ];
 
+// 消息轮询
+let messagePollingInterval = null;
+
 onMounted(async () => {
   await loadCurrentUser();
   await loadRoomInfo();
@@ -622,6 +625,19 @@ onMounted(async () => {
   
   // 标记为已读
   await markAsRead();
+  
+  // 开启消息轮询（每3秒检查新消息）
+  messagePollingInterval = setInterval(async () => {
+    const currentCount = messages.value.length;
+    await loadMessages();
+    const newCount = messages.value.length;
+    
+    // 如果有新消息，滚动到底部
+    if (newCount > currentCount) {
+      await nextTick();
+      scrollToBottom();
+    }
+  }, 3000);
 });
 
 const loadCurrentUser = async () => {
@@ -1121,6 +1137,12 @@ const markAsRead = async () => {
 // 组件卸载时清理定时器并标记已读
 onUnmounted(async () => {
   stopAutoMode();
+  
+  // 清理消息轮询
+  if (messagePollingInterval) {
+    clearInterval(messagePollingInterval);
+  }
+  
   // 离开房间时标记为已读
   await markAsRead();
 });
