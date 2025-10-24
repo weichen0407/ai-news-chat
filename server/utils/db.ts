@@ -142,16 +142,15 @@ function initDB() {
       db.exec(`ALTER TABLE room_members ADD COLUMN last_read_at DATETIME`)
     }
     
-    // 初始化jerry测试用户（使用简单的哈希，实际部署时应该用bcrypt）
+    // 初始化jerry测试用户
     const jerryUser = db.prepare('SELECT id FROM users WHERE username = ?').get('jerry')
     if (!jerryUser) {
       console.log('📝 创建jerry测试用户...')
-      // 临时使用简单密码哈希，password: 123123
-      // 实际的bcrypt hash: $2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+      // password: 123123 的SHA256哈希
       db.prepare(`
         INSERT INTO users (username, nickname, password, avatar) 
         VALUES (?, ?, ?, ?)
-      `).run('jerry', 'jerry', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', null)
+      `).run('jerry', 'Jerry', '96cae35ce8a9b0244178bf28e4966c2ce1b8385723a96a6b838858cdd6ca0a1e', null)
     }
     
   } catch (error) {

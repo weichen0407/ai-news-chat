@@ -43,7 +43,7 @@
               v-model="roomData.event_background" 
               rows="5" 
               class="textarea"
-              placeholder="描述故事背景和主要剧情线，例如：王宝强发现妻子马蓉出轨经纪人宋喆..."
+              placeholder="描述故事背景和主要剧情线，例如：一群人因某个事件产生了矛盾..."
             ></textarea>
           </div>
         </section>

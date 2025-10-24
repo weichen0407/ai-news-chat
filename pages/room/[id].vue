@@ -98,7 +98,7 @@
               <input
                 v-model="command"
                 type="text"
-                placeholder="例如：质问马蓉、安慰王宝强..."
+                placeholder="例如：进行交涉、表达观点..."
                 class="command-input"
                 @keyup.enter="generateMessage"
                 :disabled="isGenerating || isTypingMessage"

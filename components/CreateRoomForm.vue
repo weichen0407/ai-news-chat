@@ -8,7 +8,7 @@
         <input
           v-model="form.name"
           type="text"
-          placeholder="例如：王宝强事件群聊"
+          placeholder="例如：家庭讨论群"
           required
           class="input"
         />
@@ -79,7 +79,7 @@
           <input
             v-model="npc.name"
             type="text"
-            placeholder="例如：王宝强"
+            placeholder="例如：张三"
             required
             class="input"
           />
