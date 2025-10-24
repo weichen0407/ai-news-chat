@@ -1,8 +1,12 @@
-# 使用Node.js 20官方镜像
-FROM node:20-alpine
+# 使用Node.js 20标准镜像（非Alpine，支持更多原生模块）
+FROM node:20-slim
 
 # 安装构建工具（better-sqlite3需要）
-RUN apk add --no-cache python3 make g++
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
 WORKDIR /app
