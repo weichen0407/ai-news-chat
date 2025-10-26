@@ -26,8 +26,8 @@ RUN npm cache clean --force && \
 # 复制所有文件
 COPY . .
 
-# 构建应用（oxc-parser会从源代码编译）
-RUN npm run build
+# 构建应用（增加内存限制）
+RUN OXC_PARSER_DISABLE=1 NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 # 创建数据目录
 RUN mkdir -p /app/data
@@ -42,4 +42,3 @@ EXPOSE 3000
 
 # 启动命令（使用启动脚本以便看到详细日志）
 CMD ["node", "start.mjs"]
-

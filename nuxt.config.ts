@@ -11,6 +11,8 @@ export default defineNuxtConfig({
   // Railway会自动设置PORT环境变量
   nitro: {
     preset: "node-server",
+    minify: true,
+    sourceMap: false,
   },
 
   app: {
@@ -45,10 +47,11 @@ export default defineNuxtConfig({
 
   css: ["~/assets/css/main.css"],
 
-  // 启用内联样式
+  // 启用内联样式，优化内存使用
   experimental: {
     inlineSSRStyles: true,
     payloadExtraction: false,
+    viewTransition: false,
   },
 
   // 禁用oxc-parser
@@ -77,8 +80,9 @@ export default defineNuxtConfig({
     },
   },
 
-  // 使用SWC替代oxc-parser
+  // 使用SWC替代oxc-parser，优化构建
   build: {
     transpile: ["@nuxt/kit"],
+    analyze: false,
   },
 });
