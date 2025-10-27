@@ -572,8 +572,7 @@ const handleRoomCreated = async (roomId) => {
   joinRoomId.value = roomId;
 };
 
-const showAdminDatabase = () => { navigateTo("/admin/database"); }
-const old_showAdminDatabase_UNUSED = async {
+const showAdminDatabase = async () => {
   showAdminDatabaseModal.value = true;
   adminDatabaseLoading.value = true;
 
