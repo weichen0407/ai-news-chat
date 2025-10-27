@@ -573,6 +573,28 @@ const handleRoomCreated = async (roomId) => {
 };
 
 const showAdminDatabase = () => { navigateTo("/admin/database"); }
+const old_showAdminDatabase_UNUSED = async {
+  showAdminDatabaseModal.value = true;
+  adminDatabaseLoading.value = true;
+
+  try {
+    const response = await $fetch("/api/admin/database");
+
+    if (response.success) {
+      adminDatabaseData.value = response.data;
+    } else {
+      alert("加载失败: " + response.error);
+      showAdminDatabaseModal.value = false;
+    }
+  } catch (error) {
+    console.error("加载数据库信息失败:", error);
+    alert("加载失败，请重试");
+    showAdminDatabaseModal.value = false;
+  } finally {
+    adminDatabaseLoading.value = false;
+  }
+};
+
 const handleJoinRoom = async () => {
   joinError.value = "";
 
