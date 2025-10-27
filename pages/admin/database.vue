@@ -66,7 +66,7 @@
             <div v-if="room.npcs && room.npcs.length > 0" class="section">
               <h4>🤖 AI角色（{{ room.npcs.length }}个）</h4>
               <div class="npc-list">
-                Charityv-for="npc in room.npcs" :key="npc.id" class="npc-item">
+                <div v-for="npc in room.npcs" :key="npc.id" class="npc-item">
                   <div class="npc-name">{{ npc.name }}</div>
                   <div class="npc-profile">{{ npc.profile }}</div>
                 </div>
