@@ -961,7 +961,9 @@ const memberCount = computed(() => members.value?.length || 0);
 const npcCount = computed(() => npcs.value?.length || 0);
 
 const toggleAutoMode = async () => {
+  console.log("toggleAutoMode called, current value:", isAutoMode.value);
   isAutoMode.value = !isAutoMode.value;
+  console.log("toggleAutoMode new value:", isAutoMode.value);
 
   // 保存到数据库
   try {
@@ -978,6 +980,7 @@ const toggleAutoMode = async () => {
   } else {
     stopAutoMode();
   }
+  console.log("startAutoMode, isAutoMode:", isAutoMode.value);
 };
 
 const startAutoMode = async () => {
@@ -1000,6 +1003,7 @@ const startAutoMode = async () => {
   };
 
   const scheduleNext = async () => {
+  console.log("stopAutoMode, clearing interval:", autoModeInterval);
     if (!isAutoMode.value) return;
 
     await generateAutoDialogue();
