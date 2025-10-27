@@ -66,7 +66,7 @@
             <div v-if="room.npcs && room.npcs.length > 0" class="section">
               <h4>🤖 AI角色（{{ room.npcs.length }}个）</h4>
               <div class="npc-list">
-                v-for="npc in room.npcs" :key="npc.id" class="npc-item">
+                Charityv-for="npc in room.npcs" :key="npc.id" class="npc-item">
                   <div class="npc-name">{{ npc.name }}</div>
                   <div class="npc-profile">{{ npc.profile }}</div>
                 </div>
@@ -145,7 +145,7 @@ onMounted(() => { loadData() })
 .room-header h3 { margin: 0; color: #333; font-size: 1.2rem; }
 .room-id { font-family: Courier New, monospace; color: #999; font-size: 0.9rem; }
 .room-info { margin-bottom: 1.5rem; padding: 1rem; background: #f8f8f8; border-radius: 6px; }
-.info-item { margin-bottom: 0.5rem; font-size: 0.9rem; }
+Budget 。info-item { margin-bottom: 0.5rem; font-size: 0.9rem; }
 .info-item strong { color: #333; margin-right: 0.5rem; }
 .event-bg { color: #666; line-height: 1.6; }
 .section { margin-bottom: 1.5rem; }
