@@ -77,52 +77,48 @@
                       <div class="detail-value">{{ room.event_background }}</div>
                     </div>
 
-                    <!-- 三栏布局 -->
+                    <!-- 两栏布局 -->
                     <div class="detail-grid">
-                      <!-- 真人玩家 -->
+                      <!-- 左侧：角色列表（真人+AI） -->
                       <div class="detail-section">
-                        <div class="detail-label">👥 真人玩家 ({{ room.members?.length || 0 }})</div>
+                        <div class="detail-label">👥 角色列表 (真人{{ room.members?.length || 0 }} + AI{{ room.npcs?.length || 0 }})</div>
                         <div class="mini-table">
-                          <div v-for="member in room.members" :key="member.user_id" class="mini-row">
+                          <!-- 真人玩家 -->
+                          <div v-for="member in room.members" :key="'user-' + member.user_id" class="mini-row player-row">
+                            <span class="role-type player-badge">👤</span>
                             <div class="mini-col">
                               <strong>{{ member.nickname }}</strong>
                               <span class="username">({{ member.username }})</span>
+                              <div v-if="member.role_name" class="role-info">角色: {{ member.role_name }}</div>
                             </div>
-                            <div class="mini-col-right">
-                              <div v-if="member.role_name" class="tag">{{ member.role_name }}</div>
-                              <div class="mini-time">{{ formatShortDate(member.joined_at) }}</div>
-                            </div>
+                            <div class="mini-time">{{ formatShortDate(member.joined_at) }}</div>
                           </div>
-                          <div v-if="!room.members || room.members.length === 0" class="empty-hint">无</div>
-                        </div>
-                      </div>
-
-                      <!-- AI角色 -->
-                      <div class="detail-section">
-                        <div class="detail-label">🤖 AI角色 ({{ room.npcs?.length || 0 }})</div>
-                        <div class="mini-table">
-                          <div v-for="npc in room.npcs" :key="npc.id" class="mini-row">
+                          
+                          <!-- AI角色 -->
+                          <div v-for="npc in room.npcs" :key="'npc-' + npc.id" class="mini-row ai-row">
+                            <span class="role-type ai-badge">🤖</span>
                             <div class="mini-col">
                               <strong>{{ npc.name }}</strong>
                               <div class="npc-profile">{{ truncate(npc.profile, 50) }}</div>
                             </div>
                           </div>
-                          <div v-if="!room.npcs || room.npcs.length === 0" class="empty-hint">无</div>
+                          
+                          <div v-if="(!room.members || room.members.length === 0) && (!room.npcs || room.npcs.length === 0)" class="empty-hint">无角色</div>
                         </div>
                       </div>
 
-                      <!-- 最新消息 -->
+                      <!-- 右侧：最新消息（可滚动） -->
                       <div class="detail-section">
                         <div class="detail-label">💬 最新消息 ({{ room.latest_messages?.length || 0 }})</div>
-                        <div class="mini-table">
+                        <div class="messages-scroll">
                           <div v-for="msg in room.latest_messages" :key="msg.id" class="mini-row msg-row">
                             <div class="msg-header">
                               <strong>{{ msg.sender_name }}</strong>
                               <span class="mini-time">{{ formatShortDate(msg.created_at) }}</span>
                             </div>
-                            <div class="msg-content">{{ truncate(msg.content, 80) }}</div>
+                            <div class="msg-content">{{ msg.content }}</div>
                           </div>
-                          <div v-if="!room.latest_messages || room.latest_messages.length === 0" class="empty-hint">无</div>
+                          <div v-if="!room.latest_messages || room.latest_messages.length === 0" class="empty-hint">无消息</div>
                         </div>
                       </div>
                     </div>
@@ -387,7 +383,7 @@ onMounted(() => { loadData() })
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
 }
 
@@ -396,13 +392,15 @@ onMounted(() => { loadData() })
   border-radius: 4px;
   padding: 0.5rem;
   font-size: 0.8rem;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .mini-row {
   padding: 0.4rem 0.5rem;
   border-bottom: 1px solid #f0f0f0;
   display: flex;
-  justify-content: space-between;
+  gap: 0.5rem;
   align-items: flex-start;
 }
 
@@ -410,8 +408,40 @@ onMounted(() => { loadData() })
   border-bottom: none;
 }
 
+/* 真人玩家样式 */
+.player-row {
+  background: #f0f9ff;
+  border-left: 3px solid #3b82f6;
+  border-radius: 4px;
+  margin-bottom: 0.3rem;
+}
+
+/* AI角色样式 */
+.ai-row {
+  background: #f0fdf4;
+  border-left: 3px solid #10b981;
+  border-radius: 4px;
+  margin-bottom: 0.3rem;
+}
+
+.role-type {
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.player-badge {
+  filter: hue-rotate(200deg);
+}
+
+.ai-badge {
+  filter: hue-rotate(100deg);
+}
+
 .mini-col {
   flex: 1;
+  min-width: 0;
 }
 
 .mini-col strong {
@@ -425,31 +455,51 @@ onMounted(() => { loadData() })
   margin-left: 0.3rem;
 }
 
-.mini-col-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.2rem;
-}
-
-.tag {
-  background: #07c160;
-  color: white;
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
+.role-info {
   font-size: 0.7rem;
+  color: #666;
+  margin-top: 0.2rem;
 }
 
 .mini-time {
   font-size: 0.7rem;
   color: #999;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .npc-profile {
   font-size: 0.75rem;
-  color: #999;
+  color: #666;
   margin-top: 0.2rem;
   line-height: 1.4;
+}
+
+/* 消息滚动区域 */
+.messages-scroll {
+  background: white;
+  border-radius: 4px;
+  padding: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.messages-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages-scroll::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.messages-scroll::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.messages-scroll::-webkit-scrollbar-thumb:hover {
+  background: #999;
 }
 
 .msg-row {
@@ -492,9 +542,13 @@ onMounted(() => { loadData() })
   color: #fa5151;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1024px) {
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .stats-bar {
+    flex-direction: column;
   }
 }
 </style>
