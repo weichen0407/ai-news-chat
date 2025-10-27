@@ -71,10 +71,21 @@
               <tr v-if="expandedRooms[room.id]" class="detail-row">
                 <td colspan="8" class="detail-cell">
                   <div class="detail-content">
-                    <!-- 剧情背景 -->
+                    <!-- 剧情背景（流程图样式） -->
                     <div class="detail-section">
-                      <div class="detail-label">📖 剧情背景</div>
-                      <div class="detail-value">{{ room.event_background }}</div>
+                      <div class="detail-label">📖 剧情背景演变</div>
+                      <div class="timeline">
+                        <div class="timeline-item">
+                          <div class="timeline-marker">📌</div>
+                          <div class="timeline-content">
+                            <div class="timeline-header">
+                              <span class="timeline-title">初始设定</span>
+                              <span class="timeline-time">{{ formatShortDate(room.created_at) }}</span>
+                            </div>
+                            <div class="timeline-text">{{ room.event_background }}</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <!-- 两栏布局 -->
@@ -111,8 +122,13 @@
                       <div class="detail-section">
                         <div class="detail-label">💬 最新消息 ({{ room.latest_messages?.length || 0 }})</div>
                         <div class="messages-scroll">
-                          <div v-for="msg in room.latest_messages" :key="msg.id" class="mini-row msg-row">
+                          <div 
+                            v-for="msg in room.latest_messages" 
+                            :key="msg.id" 
+                            :class="['mini-row', 'msg-row', msg.sender_type === 'user' ? 'player-msg' : 'ai-msg']"
+                          >
                             <div class="msg-header">
+                              <span class="msg-type-badge">{{ msg.sender_type === 'user' ? '👤' : '🤖' }}</span>
                               <strong>{{ msg.sender_name }}</strong>
                               <span class="mini-time">{{ formatShortDate(msg.created_at) }}</span>
                             </div>
@@ -505,23 +521,48 @@ onMounted(() => { loadData() })
 .msg-row {
   flex-direction: column;
   align-items: stretch;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  padding: 0.6rem !important;
+}
+
+/* 真人玩家消息样式 */
+.player-msg {
+  background: #f0f9ff;
+  border-left: 3px solid #3b82f6;
+}
+
+/* AI消息样式 */
+.ai-msg {
+  background: #f0fdf4;
+  border-left: 3px solid #10b981;
 }
 
 .msg-header {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
   margin-bottom: 0.3rem;
+}
+
+.msg-type-badge {
+  font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
 .msg-header strong {
   color: #333;
   font-size: 0.8rem;
+  flex: 1;
 }
 
 .msg-content {
-  color: #666;
+  color: #555;
   font-size: 0.75rem;
-  line-height: 1.4;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding-left: 1.5rem;
 }
 
 .empty-hint {
@@ -529,6 +570,79 @@ onMounted(() => { loadData() })
   color: #999;
   padding: 1rem;
   font-size: 0.75rem;
+}
+
+/* 时间线样式（剧情背景演变） */
+.timeline {
+  background: white;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 0.8rem;
+  position: relative;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 30px;
+  bottom: -20px;
+  width: 2px;
+  background: linear-gradient(to bottom, #07c160 0%, transparent 100%);
+}
+
+.timeline-item:last-child::before {
+  display: none;
+}
+
+.timeline-marker {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.timeline-content {
+  flex: 1;
+  padding-bottom: 1rem;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-title {
+  font-weight: 600;
+  color: #07c160;
+  font-size: 0.85rem;
+}
+
+.timeline-time {
+  font-size: 0.7rem;
+  color: #999;
+}
+
+.timeline-text {
+  color: #555;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: #f7f8fa;
+  padding: 0.8rem;
+  border-radius: 4px;
+  border-left: 3px solid #07c160;
 }
 
 .loading, .error {
