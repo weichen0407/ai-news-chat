@@ -87,10 +87,13 @@
               @click="enterRoom(room.id)"
             >
               <!-- 未读数量徽章 -->
-              <div v-if="room.unread_count && room.unread_count > 0" class="unread-badge">
-                {{ room.unread_count > 99 ? '99+' : room.unread_count }}
+              <div
+                v-if="room.unread_count && room.unread_count > 0"
+                class="unread-badge"
+              >
+                {{ room.unread_count > 99 ? "99+" : room.unread_count }}
               </div>
-              
+
               <div class="room-content">
                 <div class="room-header">
                   <h3>{{ room.name }}</h3>
@@ -182,6 +185,18 @@
               </div>
             </div>
 
+            <!-- 管理员入口 -->
+            <div
+              v-if="
+                user && (user.username === 'jerry' || user.username === 'admin')
+              "
+              class="admin-section"
+            >
+              <button @click="showAdminDatabase" class="btn-admin">
+                🔧 查看数据库
+              </button>
+            </div>
+
             <button @click="handleLogout" class="btn-logout">退出登录</button>
           </div>
         </div>
@@ -232,11 +247,13 @@
 
             <div class="join-character-setup">
               <h3>设置你的角色</h3>
-              
+
               <!-- 头像选择 -->
               <div class="join-avatar-section">
                 <img
-                  :src="joinRoleAvatar || user?.avatar || '/avatars/placeholder.svg'"
+                  :src="
+                    joinRoleAvatar || user?.avatar || '/avatars/placeholder.svg'
+                  "
                   alt="角色头像"
                   class="join-avatar-preview"
                 />
@@ -250,7 +267,7 @@
                   />
                 </label>
               </div>
-              
+
               <input
                 v-model="joinRoleName"
                 type="text"
@@ -279,6 +296,131 @@
                 加入
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 管理员数据库查看弹窗 -->
+      <div
+        v-if="showAdminDatabaseModal"
+        class="modal-overlay"
+        @click="showAdminDatabaseModal = false"
+      >
+        <div
+          class="modal-content"
+          style="max-width: 900px; max-height: 90vh"
+          @click.stop
+        >
+          <h2>🔧 数据库管理</h2>
+          <p class="modal-subtitle">查看用户注册信息和聊天内容</p>
+
+          <div
+            v-if="adminDatabaseLoading"
+            style="text-align: center; padding: 2rem"
+          >
+            <p>加载中...</p>
+          </div>
+
+          <div v-else-if="adminDatabaseData" class="admin-db-view">
+            <!-- 统计信息 -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-value">
+                  {{ adminDatabaseData.stats.totalUsers }}
+                </div>
+                <div class="stat-label">总用户数</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value">
+                  {{ adminDatabaseData.stats.totalMessages }}
+                </div>
+                <div class="stat-label">总消息数</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value">
+                  {{ adminDatabaseData.stats.totalRooms }}
+                </div>
+                <div class="stat-label">总房间数</div>
+              </div>
+            </div>
+
+            <!-- 用户列表 -->
+            <div class="db-section">
+              <h3>
+                用户列表（最新{{
+                  adminDatabaseData.stats.latestUsers.length
+                }}位）
+              </h3>
+              <div class="table-container">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>用户名</th>
+                      <th>昵称</th>
+                      <th>注册时间</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="u in adminDatabaseData.stats.latestUsers"
+                      :key="u.id"
+                    >
+                      <td>{{ u.id }}</td>
+                      <td>{{ u.username }}</td>
+                      <td>{{ u.nickname }}</td>
+                      <td>{{ formatDate(u.created_at) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 消息列表 -->
+            <div class="db-section">
+              <h3>
+                最新消息（最近{{
+                  adminDatabaseData.stats.latestMessages.length
+                }}条）
+              </h3>
+              <div class="table-container">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>时间</th>
+                      <th>房间</th>
+                      <th>发送者</th>
+                      <th>内容</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="m in adminDatabaseData.stats.latestMessages"
+                      :key="m.id"
+                    >
+                      <td>{{ formatDate(m.created_at) }}</td>
+                      <td>{{ m.room_name }}</td>
+                      <td>{{ m.sender_name }}</td>
+                      <td
+                        style="
+                          max-width: 200px;
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                        "
+                      >
+                        {{ m.content }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button @click="showAdminDatabaseModal = false" class="btn-cancel">
+              关闭
+            </button>
           </div>
         </div>
       </div>
@@ -345,6 +487,9 @@ const presetRooms = ref([
 
 const showCreateRoomModal = ref(false);
 const showJoinRoomModal = ref(false);
+const showAdminDatabaseModal = ref(false);
+const adminDatabaseData = ref(null);
+const adminDatabaseLoading = ref(false);
 const joinRoomId = ref("");
 const joinRoomIdLocked = computed(() => !!joinRoomId.value);
 const joinRoleName = ref("");
@@ -359,7 +504,7 @@ onMounted(async () => {
   await loadUser();
   await loadMyRooms();
   await loadCreatedRooms();
-  
+
   // 每10秒刷新一次房间列表以更新未读数
   refreshInterval = setInterval(async () => {
     await loadMyRooms();
@@ -425,6 +570,28 @@ const handleRoomCreated = async (roomId) => {
   alert("群聊创建成功！请设置你的角色人设");
   showJoinRoomModal.value = true;
   joinRoomId.value = roomId;
+};
+
+const showAdminDatabase = async () => {
+  showAdminDatabaseModal.value = true;
+  adminDatabaseLoading.value = true;
+  
+  try {
+    const response = await $fetch("/api/admin/database");
+    
+    if (response.success) {
+      adminDatabaseData.value = response.data;
+    } else {
+      alert("加载失败: " + response.error);
+      showAdminDatabaseModal.value = false;
+    }
+  } catch (error) {
+    console.error("加载数据库信息失败:", error);
+    alert("加载失败，请重试");
+    showAdminDatabaseModal.value = false;
+  } finally {
+    adminDatabaseLoading.value = false;
+  }
 };
 
 const handleJoinRoom = async () => {
@@ -531,10 +698,12 @@ const formatMemberCount = (room) => {
 const joinPresetRoom = async (roomId) => {
   try {
     // 先检查该热门房间是否已存在
-    const checkResponse = await $fetch(`/api/rooms/check-preset?presetId=${roomId}`);
-    
+    const checkResponse = await $fetch(
+      `/api/rooms/check-preset?presetId=${roomId}`
+    );
+
     let finalRoomId = null;
-    
+
     if (checkResponse.exists) {
       // 房间已存在，直接使用
       finalRoomId = checkResponse.roomId;
@@ -544,26 +713,28 @@ const joinPresetRoom = async (roomId) => {
         method: "POST",
         body: {
           presetId: roomId, // 添加预设ID标识
-          name: presetRooms.value.find((r) => r.id === roomId)?.name || "热门房间",
-          description: presetRooms.value.find((r) => r.id === roomId)?.description || "",
+          name:
+            presetRooms.value.find((r) => r.id === roomId)?.name || "热门房间",
+          description:
+            presetRooms.value.find((r) => r.id === roomId)?.description || "",
           eventBackground: getPresetEventBackground(roomId),
           dialogueDensity: 3,
-          avatar: presetRooms.value.find((r) => r.id === roomId)?.avatar || "💬",
+          avatar:
+            presetRooms.value.find((r) => r.id === roomId)?.avatar || "💬",
           npcs: getPresetNPCs(roomId),
         },
       });
-      
+
       if (!createResponse.success) {
         alert("创建失败: " + createResponse.error);
         return;
       }
       finalRoomId = createResponse.roomId;
     }
-    
+
     // 弹出选择人设的对话框
     joinRoomId.value = finalRoomId;
     showJoinRoomModal.value = true;
-    
   } catch (error) {
     console.error("加入热门房间失败:", error);
     alert("操作失败，请重试");
@@ -591,30 +762,105 @@ const getPresetEventBackground = (roomId) => {
 const getPresetNPCs = (roomId) => {
   const npcConfigs = {
     DRAMA1: [
-      { name: "父亲", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop", profile: "家庭的经济支柱，性格严肃，希望维护家庭和谐但沟通方式较为强硬" },
-      { name: "母亲", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop", profile: "温柔但有自己的想法，在家庭矛盾中试图平衡各方关系" },
-      { name: "子女", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop", profile: "年轻一代，追求独立和自由，与父母有代沟，希望被理解" }
+      {
+        name: "父亲",
+        avatar:
+          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop",
+        profile: "家庭的经济支柱，性格严肃，希望维护家庭和谐但沟通方式较为强硬",
+      },
+      {
+        name: "母亲",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+        profile: "温柔但有自己的想法，在家庭矛盾中试图平衡各方关系",
+      },
+      {
+        name: "子女",
+        avatar:
+          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
+        profile: "年轻一代，追求独立和自由，与父母有代沟，希望被理解",
+      },
     ],
     DRAMA2: [
-      { name: "特朗普", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop", profile: "现任总统，强硬保守派，坚持美国优先政策" },
-      { name: "拜登", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop", profile: "前副总统，温和派民主党人，主张团结与和解" },
-      { name: "CNN记者", avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop", profile: "中立媒体记者，负责采访和报道选举进展" }
+      {
+        name: "特朗普",
+        avatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
+        profile: "现任总统，强硬保守派，坚持美国优先政策",
+      },
+      {
+        name: "拜登",
+        avatar:
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
+        profile: "前副总统，温和派民主党人，主张团结与和解",
+      },
+      {
+        name: "CNN记者",
+        avatar:
+          "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop",
+        profile: "中立媒体记者，负责采访和报道选举进展",
+      },
     ],
     DRAMA3: [
-      { name: "甄嬛", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop", profile: "聪慧美丽的妃子，从天真烂漫到腹黑权谋的蜕变" },
-      { name: "华妃", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop", profile: "骄横跋扈的宠妃，依仗年羹尧的权势嚣张跋扈" },
-      { name: "皇后", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop", profile: "表面慈祥实则城府极深的后宫主宰者" }
+      {
+        name: "甄嬛",
+        avatar:
+          "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
+        profile: "聪慧美丽的妃子，从天真烂漫到腹黑权谋的蜕变",
+      },
+      {
+        name: "华妃",
+        avatar:
+          "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop",
+        profile: "骄横跋扈的宠妃，依仗年羹尧的权势嚣张跋扈",
+      },
+      {
+        name: "皇后",
+        avatar:
+          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+        profile: "表面慈祥实则城府极深的后宫主宰者",
+      },
     ],
     DRAMA4: [
-      { name: "美国队长", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop", profile: "坚持自由，反对被政府控制，相信英雄应该独立行动" },
-      { name: "钢铁侠", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop", profile: "支持接受政府监管，认为超级英雄需要制约" },
-      { name: "黑寡妇", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop", profile: "在两方之间摇摆不定，最终选择站队" }
+      {
+        name: "美国队长",
+        avatar:
+          "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop",
+        profile: "坚持自由，反对被政府控制，相信英雄应该独立行动",
+      },
+      {
+        name: "钢铁侠",
+        avatar:
+          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop",
+        profile: "支持接受政府监管，认为超级英雄需要制约",
+      },
+      {
+        name: "黑寡妇",
+        avatar:
+          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop",
+        profile: "在两方之间摇摆不定，最终选择站队",
+      },
     ],
     DRAMA5: [
-      { name: "技术总监", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop", profile: "技术派，擅长产品和研发，有野心但缺乏政治手腕" },
-      { name: "运营总监", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop", profile: "善于沟通协调，手腕圆滑，背后运作能力强" },
-      { name: "销售总监", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop", profile: "业绩出色，强势果断，在公司有很强的话语权" }
-    ]
+      {
+        name: "技术总监",
+        avatar:
+          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
+        profile: "技术派，擅长产品和研发，有野心但缺乏政治手腕",
+      },
+      {
+        name: "运营总监",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+        profile: "善于沟通协调，手腕圆滑，背后运作能力强",
+      },
+      {
+        name: "销售总监",
+        avatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
+        profile: "业绩出色，强势果断，在公司有很强的话语权",
+      },
+    ],
   };
   return npcConfigs[roomId] || [];
 };
@@ -1363,5 +1609,102 @@ const getPresetNPCs = (roomId) => {
 .btn-confirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 管理员区域 */
+.admin-section {
+  margin: 1.5rem 0;
+}
+
+.btn-admin {
+  width: 100%;
+  padding: 0.8rem;
+  background: #576b95;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.btn-admin:active {
+  background: #465a7f;
+}
+
+/* 管理员数据库查看 */
+.admin-db-view {
+  max-height: calc(90vh - 120px);
+  overflow-y: auto;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: #f8f8f8;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #07c160;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.db-section {
+  margin-bottom: 2rem;
+}
+
+.db-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.table-container {
+  overflow-x: auto;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th {
+  background: #f8f8f8;
+  padding: 0.75rem;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #e5e5e5;
+}
+
+.admin-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.admin-table tr:hover {
+  background: #fafafa;
 }
 </style>
