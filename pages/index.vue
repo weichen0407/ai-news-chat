@@ -575,10 +575,10 @@ const handleRoomCreated = async (roomId) => {
 const showAdminDatabase = async () => {
   showAdminDatabaseModal.value = true;
   adminDatabaseLoading.value = true;
-  
+
   try {
     const response = await $fetch("/api/admin/database");
-    
+
     if (response.success) {
       adminDatabaseData.value = response.data;
     } else {
