@@ -1,9 +1,6 @@
 import { getDB } from '~/server/utils/db'
 import { getCurrentUser } from '~/server/utils/auth'
-
-function generateRoomId(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
-}
+import { createStory, createNPCs } from '~/chat-api'
 
 export default defineEventHandler(async (event) => {
   const user = await getCurrentUser(event)
@@ -19,39 +16,34 @@ export default defineEventHandler(async (event) => {
   }
   
   const db = getDB()
-  const roomId = generateRoomId()
   
   try {
-    // 如果是预设房间，使用jerry作为创建者
-    let creatorId = user.id
-    if (presetId) {
-      const jerryUser = db.prepare('SELECT id FROM users WHERE username = ?').get('jerry') as any
-      if (jerryUser) {
-        creatorId = jerryUser.id
-      }
-    }
+    // 使用chat-api创建剧情
+    const storyResult = createStory(db, {
+      name,
+      description,
+      eventBackground,
+      dialogueDensity,
+      avatar,
+      presetId,
+      creatorId: user.id
+    })
     
-    // 创建房间（支持preset_id）
-    db.prepare(
-      'INSERT INTO rooms (id, name, description, event_background, dialogue_density, avatar, preset_id, creator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(roomId, name, description || '', eventBackground, dialogueDensity || 2, avatar || '聊', presetId || null, creatorId)
+    if (!storyResult.success) {
+      return storyResult
+    }
     
     // 添加NPC
     if (npcs && npcs.length > 0) {
-      const insertNPC = db.prepare(
-        'INSERT INTO npcs (room_id, name, avatar, profile) VALUES (?, ?, ?, ?)'
-      )
-      
-      for (const npc of npcs) {
-        insertNPC.run(roomId, npc.name, npc.avatar || null, npc.profile)
-      }
+      const npcResult = createNPCs(db, storyResult.roomId!, npcs)
+      console.log(`创建了${npcResult.created}个NPC，失败${npcResult.failed}个`)
     }
     
     // 注意：创建者需要在第一次进入时选择人设，所以这里不自动加入
     
     return {
       success: true,
-      roomId
+      roomId: storyResult.roomId
     }
   } catch (error) {
     console.error('创建房间失败:', error)
