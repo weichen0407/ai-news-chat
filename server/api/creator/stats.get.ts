@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     
     const stats = {
       totalStories: db.prepare('SELECT COUNT(*) as count FROM stories').get().count,
-      totalNPCs: db.prepare('SELECT COUNT(*) as count FROM npcs').get().count
+      totalNPCs: db.prepare('SELECT COUNT(*) as count FROM story_npcs').get().count
     }
     
     return { success: true, data: stats }

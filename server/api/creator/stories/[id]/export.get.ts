@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    const npcs = db.prepare('SELECT * FROM npcs WHERE story_id = ?').all(id)
+    const npcs = db.prepare('SELECT * FROM story_npcs WHERE story_id = ?').all(id)
     
     const exportData = {
       version: '2.0',
