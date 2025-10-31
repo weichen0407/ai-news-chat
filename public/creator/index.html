@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Story Creator - 剧情和NPC创作工具</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 头部 -->
+    <header class="header">
+      <div class="container">
+        <h1>🎭 Story Creator</h1>
+        <p class="subtitle">剧情和NPC创作工具</p>
+        <div class="stats">
+          <span class="stat-item">📖 <strong id="totalStories">0</strong> 个剧情</span>
+          <span class="stat-item">🎮 <strong id="totalNPCs">0</strong> 个角色</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="main">
+      <div class="container">
+        <!-- 左侧：剧情列表 -->
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <h2>📚 剧情列表</h2>
+            <button onclick="app.showCreateStoryModal()" class="btn btn-primary">➕ 新建剧情</button>
+          </div>
+          <div id="storyList" class="story-list">
+            <!-- 动态加载 -->
+          </div>
+        </aside>
+
+        <!-- 右侧：剧情详情 -->
+        <section class="content">
+          <div id="emptyState" class="empty-state">
+            <div class="empty-icon">📝</div>
+            <h3>开始创作你的第一个剧情</h3>
+            <p>点击左侧"新建剧情"按钮开始</p>
+          </div>
+
+          <div id="storyDetail" class="story-detail" style="display:none;">
+            <!-- 剧情信息 -->
+            <div class="detail-header">
+              <div class="detail-title">
+                <span class="story-avatar" id="detailAvatar">📖</span>
+                <h2 id="detailName">剧情名称</h2>
+              </div>
+              <div class="detail-actions">
+                <button onclick="app.editStory()" class="btn btn-secondary">✏️ 编辑</button>
+                <button onclick="app.exportStory()" class="btn btn-secondary">📤 导出</button>
+                <button onclick="app.deleteStory()" class="btn btn-danger">🗑️ 删除</button>
+              </div>
+            </div>
+
+            <div class="detail-body">
+              <!-- 剧情背景 -->
+              <div class="info-card">
+                <h3>📖 剧情背景</h3>
+                <p id="detailBackground">剧情背景内容...</p>
+              </div>
+
+              <div class="info-card">
+                <h3>📝 描述</h3>
+                <p id="detailDescription">描述内容...</p>
+              </div>
+
+              <!-- NPC角色列表 -->
+              <div class="npc-section">
+                <div class="section-header">
+                  <h3>🎮 游戏角色 (<span id="npcCount">0</span>)</h3>
+                  <button onclick="app.showCreateNPCModal()" class="btn btn-sm btn-primary">➕ 创建角色</button>
+                </div>
+                <div id="npcList" class="npc-grid">
+                  <!-- 动态加载 -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- 模态框容器 -->
+  <div id="modalContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+

@@ -36,6 +36,12 @@
           我创建的
         </button>
         <button
+          :class="['tab-btn', { active: activeTab === 'creator' }]"
+          @click="goToCreator"
+        >
+          🎨 创作工具
+        </button>
+        <button
           :class="['tab-btn', { active: activeTab === 'profile' }]"
           @click="activeTab = 'profile'"
         >
@@ -555,6 +561,10 @@ const loadCreatedRooms = async () => {
 
 const enterRoom = (roomId) => {
   navigateTo(`/room/${roomId}`);
+};
+
+const goToCreator = () => {
+  navigateTo('/creator');
 };
 
 const editRoom = (roomId) => {
