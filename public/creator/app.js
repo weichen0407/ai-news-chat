@@ -48,7 +48,7 @@ const app = {
         btn.textContent = '加载中...';
       }
       
-      const res = await fetch(`${API_BASE}/init-presets`, {
+      const res = await fetch(`${API_BASE}/init-all-dramas`, {
         method: 'POST'
       });
       const data = await res.json();
