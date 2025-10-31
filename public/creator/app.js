@@ -21,9 +21,54 @@ const app = {
       if (data.success) {
         document.getElementById('totalStories').textContent = data.data.totalStories;
         document.getElementById('totalNPCs').textContent = data.data.totalNPCs;
+        
+        // 如果没有剧情，显示初始化按钮
+        const initBtn = document.getElementById('initPresetsBtn');
+        if (data.data.totalStories === 0 && initBtn) {
+          initBtn.style.display = 'inline-block';
+        } else if (initBtn) {
+          initBtn.style.display = 'none';
+        }
       }
     } catch (error) {
       console.error('加载统计失败:', error);
+    }
+  },
+  
+  // 初始化预设剧情
+  async initPresets() {
+    if (!confirm('确定要加载预设剧情吗？这将添加示例剧情和角色到数据库。')) {
+      return;
+    }
+    
+    try {
+      const btn = document.getElementById('initPresetsBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '加载中...';
+      }
+      
+      const res = await fetch(`${API_BASE}/init-presets`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        alert(`成功加载 ${data.totalStories} 个剧情和 ${data.totalNPCs} 个角色！`);
+        await this.loadStats();
+        await this.loadStories();
+      } else {
+        alert('加载失败: ' + data.error);
+      }
+    } catch (error) {
+      console.error('初始化预设失败:', error);
+      alert('初始化失败，请重试');
+    } finally {
+      const btn = document.getElementById('initPresetsBtn');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '📦 加载预设剧情';
+      }
     }
   },
   
