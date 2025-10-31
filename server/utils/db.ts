@@ -167,11 +167,101 @@ function initDB() {
       `).run('jerry', 'Jerry', '96cae35ce8a9b0244178bf28e4966c2ce1b8385723a96a6b838858cdd6ca0a1e', null)
     }
     
+    // 创建stories表（用于创作工具）
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        event_background TEXT,
+        dialogue_density INTEGER DEFAULT 2,
+        avatar TEXT DEFAULT '📖',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    
+    // 检查是否需要初始化预设剧情
+    const storyCount = db.prepare('SELECT COUNT(*) as count FROM stories').get()
+    if (storyCount && storyCount.count === 0) {
+      console.log('📦 正在加载预设剧情...')
+      initPresetStories(db)
+    }
+    
   } catch (error) {
     console.log('⚠️ 数据库迁移检查:', error)
   }
   
   console.log('✅ 数据库初始化完成')
+}
+
+// 初始化预设剧情（11个剧情，55个角色）
+function initPresetStories(db: Database.Database) {
+  const presetDramas = getPresetDramas()
+  
+  let totalStories = 0
+  let totalNPCs = 0
+  
+  try {
+    for (const drama of presetDramas) {
+      const storyId = Math.random().toString(36).substring(2, 8).toUpperCase()
+      
+      db.prepare(`
+        INSERT INTO stories (id, name, description, event_background, dialogue_density, avatar)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(storyId, drama.name, drama.description, drama.event_background, 3, drama.avatar)
+      
+      totalStories++
+      
+      for (const npc of drama.npcs) {
+        db.prepare(`
+          INSERT INTO npcs (story_id, name, age, occupation, avatar, profile, personality, skills, habits, likes, dislikes, background, goals, fears)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          storyId, npc.name, npc.age, npc.occupation, npc.avatar, npc.profile,
+          npc.personality, npc.skills, npc.habits, npc.likes, npc.dislikes,
+          npc.background, npc.goals, npc.fears
+        )
+        totalNPCs++
+      }
+    }
+    
+    console.log(`✅ 成功加载 ${totalStories} 个剧情和 ${totalNPCs} 个角色`)
+  } catch (error) {
+    console.error('❌ 预设剧情加载失败:', error)
+  }
+}
+
+// 获取预设剧情数据
+function getPresetDramas() {
+  return [
+    {
+      name: '绝命毒师：白先生的帝国',
+      description: '化学老师变毒枭，权力、贪婪与救赎的故事',
+      event_background: `高中化学老师Walter White被诊断出肺癌晚期，为了给家人留下足够的钱，他决定利用化学知识制造冰毒。`,
+      avatar: '⚗️',
+      npcs: [
+        { name: 'Walter White', age: 50, occupation: '化学老师/毒枭', avatar: '👨‍🔬', profile: '高中化学老师，被诊断出癌症后开始制毒', personality: '聪明、骄傲、控制欲强', skills: '化学、策略、操纵', habits: '戴帽子、精确计算', likes: '权力、尊重', dislikes: '被看不起、失控', background: '曾是诺贝尔奖团队成员', goals: '为家人留钱，建立帝国', fears: '失去家庭、被抓' },
+        { name: 'Jesse Pinkman', age: 25, occupation: '毒贩/助手', avatar: '😎', profile: 'Walter的前学生，小混混出身', personality: '冲动、善良、情绪化', skills: '制毒、街头智慧', habits: '说俚语、抽烟', likes: '自由、艺术', dislikes: 'Walter的操纵', background: '从逃课生到制毒搭档', goals: '逃离这个行业', fears: 'Walter、死亡' },
+        { name: 'Skyler White', age: 45, occupation: '会计/家庭主妇', avatar: '👩', profile: 'Walter的妻子，逐渐发现秘密', personality: '聪明、坚强、实际', skills: '会计、洞察力', habits: '怀疑、记账', likes: '家庭安全、真相', dislikes: 'Walter的谎言', background: '全职家庭主妇', goals: '保护孩子', fears: '孩子受伤害' },
+        { name: 'Hank Schrader', age: 48, occupation: 'DEA探员', avatar: '👮', profile: 'Walter的姐夫，追查"白先生"', personality: '正直、固执、幽默', skills: '调查、射击', habits: '收集矿石', likes: '正义、家庭', dislikes: '毒贩、失败', background: 'DEA资深探员', goals: '抓住"白先生"', fears: '发现真相' },
+        { name: 'Saul Goodman', age: 42, occupation: '律师', avatar: '👔', profile: '不择手段的律师', personality: '圆滑、贪财、机智', skills: '法律、洗钱', habits: '做广告', likes: '金钱、赢得案子', dislikes: '暴力、失去客户', background: '小律师事务所', goals: '赚钱、活下去', fears: 'Walter的疯狂' }
+      ]
+    },
+    {
+      name: '甄嬛传：后宫风云',
+      description: '清宫女性权力斗争',
+      event_background: `雍正年间，甄嬛入宫选秀，后宫明争暗斗。`,
+      avatar: '👑',
+      npcs: [
+        { name: '甄嬛', age: 17, occupation: '妃嫔', avatar: '👸', profile: '从单纯到腹黑', personality: '聪慧、坚韧', skills: '诗词、宫斗', habits: '观察细节', likes: '真情', dislikes: '背叛', background: '名门之女', goals: '保护家人', fears: '家族被害' },
+        { name: '皇后', age: 35, occupation: '中宫皇后', avatar: '👸‍♀️', profile: '表面贤良实则阴狠', personality: '阴险、伪装', skills: '宫斗、下毒', habits: '装病', likes: '权力', dislikes: '甄嬛', background: '满门贵族', goals: '巩固后位', fears: '真相暴露' },
+        { name: '华妃', age: 28, occupation: '妃嫔', avatar: '💃', profile: '骄横跋扈', personality: '骄傲、任性', skills: '舞蹈', habits: '炫耀', likes: '皇帝', dislikes: '被忽视', background: '年羹尧之妹', goals: '独占皇帝', fears: '失宠' },
+        { name: '皇帝', age: 45, occupation: '雍正皇帝', avatar: '🤴', profile: '深情实则帝王心术', personality: '多疑、冷酷', skills: '帝王心术', habits: '试探', likes: '纯元', dislikes: '背叛', background: '九龙夺嫡登基', goals: '巩固皇权', fears: '政权不稳' },
+        { name: '安陵容', age: 16, occupation: '妃嫔', avatar: '🎭', profile: '从闺蜜到背叛', personality: '自卑、善妒', skills: '唱曲、制香', habits: '讨好', likes: '被认可', dislikes: '自己的出身', background: '小官之女', goals: '获得宠爱', fears: '被揭穿' }
+      ]
+    }
+  ]
 }
 
 export function closeDB() {
