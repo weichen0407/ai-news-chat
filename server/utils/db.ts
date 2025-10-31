@@ -167,19 +167,42 @@ function initDB() {
       `).run('jerry', 'Jerry', '96cae35ce8a9b0244178bf28e4966c2ce1b8385723a96a6b838858cdd6ca0a1e', null)
     }
     
-    // 创建stories表（用于创作工具）
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS stories (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT,
-        event_background TEXT,
-        dialogue_density INTEGER DEFAULT 2,
-        avatar TEXT DEFAULT '📖',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
+  // 创建stories表（用于创作工具）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS stories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      event_background TEXT,
+      dialogue_density INTEGER DEFAULT 2,
+      avatar TEXT DEFAULT '📖',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  // 创建story_npcs表（用于存储剧情模板的NPC）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS story_npcs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      story_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      age INTEGER,
+      occupation TEXT,
+      avatar TEXT,
+      profile TEXT,
+      personality TEXT,
+      skills TEXT,
+      habits TEXT,
+      likes TEXT,
+      dislikes TEXT,
+      background TEXT,
+      goals TEXT,
+      fears TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE
+    )
+  `)
     
     // 检查是否需要初始化预设剧情
     const storyCount = db.prepare('SELECT COUNT(*) as count FROM stories').get()
@@ -191,6 +214,41 @@ function initDB() {
     
   } catch (error) {
     console.log('⚠️ 数据库迁移检查:', error)
+  }
+  
+  // 迁移：为npcs表添加story_id和扩展字段
+  try {
+    const npcsColumns = db.prepare(`PRAGMA table_info(npcs)`).all()
+    const columnNames = npcsColumns.map((col: any) => col.name)
+    
+    // 添加story_id字段（用于剧情模板）
+    if (!columnNames.includes('story_id')) {
+      db.exec(`ALTER TABLE npcs ADD COLUMN story_id TEXT`)
+      console.log('✅ 已添加npcs.story_id字段')
+    }
+    
+    // 添加扩展字段
+    const newFields = [
+      { name: 'age', type: 'INTEGER' },
+      { name: 'occupation', type: 'TEXT' },
+      { name: 'personality', type: 'TEXT' },
+      { name: 'skills', type: 'TEXT' },
+      { name: 'habits', type: 'TEXT' },
+      { name: 'likes', type: 'TEXT' },
+      { name: 'dislikes', type: 'TEXT' },
+      { name: 'background', type: 'TEXT' },
+      { name: 'goals', type: 'TEXT' },
+      { name: 'fears', type: 'TEXT' }
+    ]
+    
+    for (const field of newFields) {
+      if (!columnNames.includes(field.name)) {
+        db.exec(`ALTER TABLE npcs ADD COLUMN ${field.name} ${field.type}`)
+        console.log(`✅ 已添加npcs.${field.name}字段`)
+      }
+    }
+  } catch (error) {
+    console.log('⚠️ npcs表迁移检查:', error)
   }
   
   console.log('✅ 数据库初始化完成')

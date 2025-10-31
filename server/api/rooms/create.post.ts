@@ -1,6 +1,6 @@
 import { getDB } from '~/server/utils/db'
 import { getCurrentUser } from '~/server/utils/auth'
-import { createStory, createNPCs } from '~/chat-api'
+import { createStory, createNPCs } from '~/server/utils/chat-api'
 
 export default defineEventHandler(async (event) => {
   const user = await getCurrentUser(event)
