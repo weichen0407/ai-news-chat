@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
         s.*,
         COUNT(DISTINCT n.id) as npc_count
       FROM stories s
-      LEFT JOIN npcs n ON s.id = n.story_id
+      LEFT JOIN story_npcs n ON s.id = n.story_id
       GROUP BY s.id
       ORDER BY s.created_at DESC
     `).all()
