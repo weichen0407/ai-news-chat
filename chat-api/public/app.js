@@ -2,11 +2,10 @@
  * Story Creator - 前端应用逻辑
  */
 
-const API_BASE = '/api/creator';
+const API_BASE = '/api';
 
 const app = {
   currentStoryId: null,
-  parsedNPCs: null, // 用于缓存AI解析出的NPC数据
   
   // 初始化
   async init() {
@@ -22,54 +21,9 @@ const app = {
       if (data.success) {
         document.getElementById('totalStories').textContent = data.data.totalStories;
         document.getElementById('totalNPCs').textContent = data.data.totalNPCs;
-        
-        // 如果没有剧情，显示初始化按钮
-        const initBtn = document.getElementById('initPresetsBtn');
-        if (data.data.totalStories === 0 && initBtn) {
-          initBtn.style.display = 'inline-block';
-        } else if (initBtn) {
-          initBtn.style.display = 'none';
-        }
       }
     } catch (error) {
       console.error('加载统计失败:', error);
-    }
-  },
-  
-  // 初始化预设剧情
-  async initPresets() {
-    if (!confirm('确定要加载预设剧情吗？这将添加示例剧情和角色到数据库。')) {
-      return;
-    }
-    
-    try {
-      const btn = document.getElementById('initPresetsBtn');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '加载中...';
-      }
-      
-      const res = await fetch(`${API_BASE}/init-all-dramas`, {
-        method: 'POST'
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        alert(`成功加载 ${data.totalStories} 个剧情和 ${data.totalNPCs} 个角色！`);
-        await this.loadStats();
-        await this.loadStories();
-      } else {
-        alert('加载失败: ' + data.error);
-      }
-    } catch (error) {
-      console.error('初始化预设失败:', error);
-      alert('初始化失败，请重试');
-    } finally {
-      const btn = document.getElementById('initPresetsBtn');
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = '📦 加载预设剧情';
-      }
     }
   },
   
@@ -171,71 +125,37 @@ const app = {
   showCreateStoryModal() {
     const modalHtml = `
       <div class="modal-overlay" onclick="if(event.target===this) app.closeModal()">
-        <div class="modal modal-large">
+        <div class="modal">
           <div class="modal-header">
             <h2>📖 创建新剧情</h2>
           </div>
           <div class="modal-body">
-            <!-- AI智能解析区域 -->
-            <div class="ai-parse-section">
-              <div class="ai-parse-header">
-                <h3>🤖 AI智能解析</h3>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="app.toggleAIParseHelp()">❓ 使用说明</button>
-              </div>
-              <div id="aiParseHelp" class="ai-parse-help" style="display:none;">
-                <p><strong>💡 使用提示：</strong></p>
-                <ul>
-                  <li>输入任何剧情相关的文本，AI会自动提取剧情信息和角色</li>
-                  <li>可以是小说片段、剧本、新闻、历史事件等任何内容</li>
-                  <li>文本越详细，AI生成的结果越准确</li>
-                  <li>示例：复制一段《权力的游戏》剧情，AI会自动识别出角色和背景</li>
-                </ul>
-              </div>
-              <div class="form-group">
-                <label>输入剧情文本 *</label>
-                <textarea id="aiParseText" rows="6" placeholder="在这里粘贴或输入剧情相关的文本...&#10;&#10;示例：&#10;王宝强和马蓉在2009年结婚，婚后育有一儿一女。2016年8月，王宝强发现妻子马蓉与其经纪人宋喆存在不正当关系，且在婚内出轨并转移、隐匿夫妻共同财产..."></textarea>
-              </div>
-              <div class="ai-parse-actions">
-                <button type="button" class="btn btn-primary" onclick="app.aiParseStory()">
-                  ✨ AI智能解析
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="app.clearAIParse()">
-                  🗑️ 清空
-                </button>
-              </div>
-              <div id="aiParseStatus" class="ai-parse-status"></div>
-            </div>
-
-            <div class="form-divider">
-              <span>或手动填写</span>
-            </div>
-
             <form id="createStoryForm" onsubmit="app.createStory(event)">
               <div class="form-group">
                 <label>剧情名称 *</label>
-                <input type="text" name="name" id="storyName" required placeholder="例如：办公室风云">
+                <input type="text" name="name" required placeholder="例如：办公室风云">
               </div>
               
               <div class="form-group">
                 <label>描述</label>
-                <textarea name="description" id="storyDescription" placeholder="简单描述这个剧情..."></textarea>
+                <textarea name="description" placeholder="简单描述这个剧情..."></textarea>
               </div>
               
               <div class="form-group">
                 <label>事件背景 *</label>
-                <textarea name="eventBackground" id="storyEventBackground" required rows="5" placeholder="详细描述故事背景和主要事件..."></textarea>
+                <textarea name="eventBackground" required rows="5" placeholder="详细描述故事背景和主要事件..."></textarea>
                 <div class="form-hint">这将作为AI对话的基础背景</div>
               </div>
               
               <div class="form-group">
                 <label>对话密度</label>
-                <input type="number" name="dialogueDensity" id="storyDialogueDensity" min="1" max="10" value="2" placeholder="2">
+                <input type="number" name="dialogueDensity" min="1" max="10" value="2" placeholder="2">
                 <div class="form-hint">每轮对话中角色回复的条数（1-10）</div>
               </div>
               
               <div class="form-group">
                 <label>图标</label>
-                <input type="text" name="avatar" id="storyAvatar" value="📖" placeholder="📖">
+                <input type="text" name="avatar" value="📖" placeholder="📖">
                 <div class="form-hint">一个emoji表情</div>
               </div>
             </form>
@@ -250,79 +170,6 @@ const app = {
     document.getElementById('modalContainer').innerHTML = modalHtml;
   },
   
-  // 切换AI解析帮助信息
-  toggleAIParseHelp() {
-    const helpEl = document.getElementById('aiParseHelp');
-    if (helpEl) {
-      helpEl.style.display = helpEl.style.display === 'none' ? 'block' : 'none';
-    }
-  },
-
-  // 清空AI解析
-  clearAIParse() {
-    const textEl = document.getElementById('aiParseText');
-    const statusEl = document.getElementById('aiParseStatus');
-    if (textEl) textEl.value = '';
-    if (statusEl) statusEl.innerHTML = '';
-    this.parsedNPCs = null; // 清除缓存的NPC数据
-  },
-
-  // AI智能解析剧情
-  async aiParseStory() {
-    const textEl = document.getElementById('aiParseText');
-    const statusEl = document.getElementById('aiParseStatus');
-    
-    if (!textEl || !statusEl) return;
-    
-    const text = textEl.value.trim();
-    
-    if (!text) {
-      statusEl.innerHTML = '<div class="status-error">❌ 请输入要解析的文本</div>';
-      return;
-    }
-    
-    statusEl.innerHTML = '<div class="status-loading">🔄 AI正在解析中，请稍候...</div>';
-    
-    try {
-      const response = await fetch('/api/creator/ai-parse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // 填充剧情信息
-        document.getElementById('storyName').value = result.story.name || '';
-        document.getElementById('storyDescription').value = result.story.description || '';
-        document.getElementById('storyEventBackground').value = result.story.eventBackground || '';
-        document.getElementById('storyDialogueDensity').value = result.story.dialogueDensity || 2;
-        document.getElementById('storyAvatar').value = result.story.avatar || '📖';
-        
-        // 缓存NPC数据，待剧情创建后使用
-        this.parsedNPCs = result.npcs;
-        
-        statusEl.innerHTML = `
-          <div class="status-success">
-            ✅ 解析成功！
-            <div class="parse-result">
-              <strong>剧情：</strong>${result.story.name}<br>
-              <strong>识别到${result.npcs.length}个角色：</strong>${result.npcs.map(npc => npc.name).join('、')}<br>
-              <small>${result.reasoning}</small>
-            </div>
-            <div class="form-hint">✨ 表单已自动填充，角色将在创建剧情后自动添加</div>
-          </div>
-        `;
-      } else {
-        statusEl.innerHTML = `<div class="status-error">❌ 解析失败：${result.error}</div>`;
-      }
-    } catch (error) {
-      console.error('AI解析失败:', error);
-      statusEl.innerHTML = '<div class="status-error">❌ 解析失败，请检查网络连接或稍后重试</div>';
-    }
-  },
-
   // 创建剧情
   async createStory(event) {
     event.preventDefault();
@@ -339,35 +186,10 @@ const app = {
       const result = await res.json();
       
       if (result.success) {
-        const storyId = result.storyId;
-        
-        // 如果有解析出的NPC，自动创建它们
-        if (this.parsedNPCs && this.parsedNPCs.length > 0) {
-          const statusEl = document.getElementById('aiParseStatus');
-          if (statusEl) {
-            statusEl.innerHTML = '<div class="status-loading">🔄 正在创建角色...</div>';
-          }
-          
-          // 批量创建NPC
-          for (const npc of this.parsedNPCs) {
-            try {
-              await fetch(`${API_BASE}/stories/${storyId}/npcs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(npc)
-              });
-            } catch (npcError) {
-              console.error('创建NPC失败:', npc.name, npcError);
-            }
-          }
-          
-          this.parsedNPCs = null; // 清除缓存
-        }
-        
         this.closeModal();
         await this.loadStats();
         await this.loadStories();
-        await this.selectStory(storyId);
+        await this.selectStory(result.storyId);
       } else {
         alert('创建失败: ' + result.error);
       }

@@ -39,13 +39,6 @@ body {
   display: flex;
   gap: 2rem;
   margin-top: 1rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.stats a.btn {
-  color: white;
-  text-decoration: none;
 }
 
 .stat-item {
@@ -496,148 +489,6 @@ body {
   margin-top: 0.3rem;
 }
 
-/* 大模态框 */
-.modal-large {
-  max-width: 900px !important;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-/* AI智能解析区域 */
-.ai-parse-section {
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 100%);
-  border: 2px solid #667eea;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.ai-parse-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.ai-parse-header h3 {
-  color: #667eea;
-  font-size: 1.3rem;
-  margin: 0;
-}
-
-.ai-parse-help {
-  background: white;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.ai-parse-help p {
-  margin: 0 0 0.5rem 0;
-  color: #667eea;
-  font-weight: 600;
-}
-
-.ai-parse-help ul {
-  margin: 0;
-  padding-left: 1.5rem;
-}
-
-.ai-parse-help li {
-  margin: 0.3rem 0;
-  color: #4b5563;
-  line-height: 1.6;
-}
-
-.ai-parse-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.ai-parse-status {
-  margin-top: 1rem;
-  min-height: 40px;
-}
-
-.status-loading,
-.status-success,
-.status-error {
-  padding: 1rem;
-  border-radius: 8px;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.status-loading {
-  background: #fef3c7;
-  color: #92400e;
-  border-left: 4px solid #f59e0b;
-}
-
-.status-success {
-  background: #d1fae5;
-  color: #065f46;
-  border-left: 4px solid #10b981;
-}
-
-.status-error {
-  background: #fee2e2;
-  color: #991b1b;
-  border-left: 4px solid #ef4444;
-}
-
-.parse-result {
-  margin-top: 0.8rem;
-  padding: 0.8rem;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 6px;
-  line-height: 1.8;
-}
-
-.parse-result strong {
-  color: #374151;
-}
-
-.parse-result small {
-  display: block;
-  margin-top: 0.5rem;
-  color: #6b7280;
-  font-style: italic;
-}
-
-/* 表单分隔线 */
-.form-divider {
-  position: relative;
-  text-align: center;
-  margin: 2rem 0;
-}
-
-.form-divider::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(to right, transparent, #d1d5db 20%, #d1d5db 80%, transparent);
-}
-
-.form-divider span {
-  position: relative;
-  display: inline-block;
-  padding: 0 1.5rem;
-  background: white;
-  color: #9ca3af;
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
 /* Responsive */
 @media (max-width: 1024px) {
   .main .container {
@@ -648,18 +499,6 @@ body {
     position: relative;
     top: 0;
     max-height: none;
-  }
-  
-  .modal-large {
-    max-width: 95vw;
-  }
-  
-  .ai-parse-actions {
-    flex-direction: column;
-  }
-  
-  .ai-parse-actions .btn {
-    width: 100%;
   }
 }
 

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Creator - 地图编辑器</title>
+  <link rel="stylesheet" href="/map-creator/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 头部 -->
+    <header class="header">
+      <div class="container">
+        <h1>🗺️ Map Creator</h1>
+        <p class="subtitle">瓦片地图编辑器 - 支持TMJ格式导出与AI分层</p>
+        <div class="header-actions">
+          <!-- 模式切换 -->
+          <div class="mode-switcher">
+            <button id="createModeBtn" onclick="mapApp.switchMode('create')" class="btn btn-mode active" title="创造模式 - 绘制地图">
+              🎨 创造模式
+            </button>
+            <button id="selectModeBtn" onclick="mapApp.switchMode('select')" class="btn btn-mode" title="选择模式 - 选择和编辑区域">
+              🎯 选择模式
+            </button>
+            <button id="tileModeBtn" onclick="mapApp.switchMode('tile')" class="btn btn-mode" title="Tile模式 - 使用图片素材">
+              🖼️ Tile模式
+            </button>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <button id="undoBtn" onclick="mapApp.undo()" class="btn btn-secondary" disabled title="撤销 (Ctrl+Z)">↶ 撤销</button>
+          <button id="redoBtn" onclick="mapApp.redo()" class="btn btn-secondary" disabled title="重做 (Ctrl+Y)">↷ 重做</button>
+          <button onclick="mapApp.newMap()" class="btn btn-primary">📄 新建地图</button>
+          <button onclick="mapApp.exportRawMap()" class="btn btn-success">💾 导出Raw Map (TMJ)</button>
+          <button onclick="mapApp.aiLayering()" class="btn btn-warning">🤖 AI自动分层</button>
+          <a href="/creator" class="btn btn-secondary">← 返回Story Creator</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="main">
+      <div class="container-fluid">
+        <!-- 左侧：工具面板 -->
+        <aside class="sidebar">
+          <!-- 创造模式面板 -->
+          <div id="createModePanel" class="panel">
+            <h3>🎨 绘制工具</h3>
+            
+            <!-- 地图尺寸设置 -->
+            <div class="section">
+              <label>地图尺寸</label>
+              <div class="size-inputs">
+                <input type="number" id="mapWidth" value="64" min="8" max="256" placeholder="宽">
+                <span>×</span>
+                <input type="number" id="mapHeight" value="64" min="8" max="256" placeholder="高">
+                <button onclick="mapApp.createGrid()" class="btn btn-sm">创建</button>
+              </div>
+            </div>
+
+            <!-- 世界描述 -->
+            <div class="section">
+              <label>世界描述</label>
+              <textarea id="worldDescription" rows="3" placeholder="描述整个世界的概括，用于AI分层处理..."></textarea>
+            </div>
+
+            <!-- 绘制工具 -->
+            <div class="section">
+              <label>绘制工具</label>
+              <select id="drawMode" onchange="mapApp.setDrawMode(this.value)">
+                <option value="brush">🖌️ 画笔</option>
+                <option value="eraser">🧹 橡皮擦</option>
+                <option value="single">📍 单格绘制</option>
+                <option value="rect" selected>⬜ 矩形填充</option>
+                <option value="fill">🪣 填充工具</option>
+              </select>
+            </div>
+
+            <!-- 画笔大小 -->
+            <div class="section">
+              <label>画笔/橡皮擦大小: <strong id="brushSizeDisplay">1</strong></label>
+              <input type="range" id="brushSize" min="1" max="10" value="1" 
+                     onchange="mapApp.setBrushSize(this.value)" 
+                     oninput="mapApp.setBrushSize(this.value)" 
+                     style="width: 100%;">
+            </div>
+
+            <!-- 瓦片类型 -->
+            <div class="section">
+              <label>瓦片类型</label>
+              <div id="tileTypes" class="tile-types">
+                <!-- 默认瓦片类型 -->
+              </div>
+              <button onclick="mapApp.showAddTileTypeModal()" class="btn btn-sm btn-block">➕ 添加类型</button>
+            </div>
+          </div>
+
+          <!-- 选择模式面板 -->
+          <div id="selectModePanel" class="panel" style="display: none;">
+            <h3>🎯 选择模式</h3>
+            
+            <div class="section">
+              <div class="info-box">
+                <p style="margin: 0 0 1rem 0; line-height: 1.6;">
+                  <strong>使用方法：</strong><br>
+                  • 将鼠标悬停在地图上<br>
+                  • 系统自动识别同色区域<br>
+                  • 点击鼠标选择该区域<br>
+                  • 在右侧编辑区域信息
+                </p>
+                
+                <div class="selection-info">
+                  <div class="info-item">
+                    <span class="info-label">当前悬停:</span>
+                    <span id="hoverInfo" class="info-value">-</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">识别瓦片:</span>
+                    <span id="hoveredTilesCount" class="info-value">0</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">区域范围:</span>
+                    <span id="hoveredBounds" class="info-value">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 快捷操作 -->
+            <div class="section">
+              <label>快捷操作</label>
+              <button onclick="mapApp.switchMode('create')" class="btn btn-secondary btn-block">
+                🎨 切换到创造模式
+              </button>
+            </div>
+          </div>
+
+          <!-- Tile模式面板 -->
+          <div id="tileModePanel" class="panel" style="display: none;">
+            <h3>🖼️ Tile模式</h3>
+            
+            <!-- Tile Set 管理 -->
+            <div class="section">
+              <label>Tile Set 素材库</label>
+              <input type="file" id="tileSetUpload" multiple accept="image/png,image/jpg,image/jpeg" 
+                     onchange="mapApp.uploadTileSet(event)" style="display: none;">
+              <button onclick="document.getElementById('tileSetUpload').click()" class="btn btn-primary btn-block">
+                📁 上传 Tile Set
+              </button>
+              <p style="font-size: 0.85rem; color: #666; margin: 0.5rem 0;">
+                支持单张图片或Tile Set（自动切割）
+              </p>
+              <div id="tileSetList" class="tile-set-list">
+                <div class="empty-hint">暂无上传的Tile</div>
+              </div>
+            </div>
+            
+            <!-- Tile Set 切割设置 -->
+            <div class="section">
+              <label>Tile Set 切割设置</label>
+              <div class="form-group">
+                <label style="font-size: 0.85rem;">单个Tile尺寸</label>
+                <div class="size-inputs">
+                  <input type="number" id="tileWidth" value="16" min="8" max="128" style="width: 60px;">
+                  <span>×</span>
+                  <input type="number" id="tileHeight" value="16" min="8" max="128" style="width: 60px;">
+                </div>
+              </div>
+              <button onclick="mapApp.showTileSetCutterModal()" class="btn btn-secondary btn-block">
+                ✂️ 手动切割Tile Set
+              </button>
+            </div>
+
+            <!-- 绘制工具 -->
+            <div class="section">
+              <label>绘制工具</label>
+              <select id="tileDrawMode" onchange="mapApp.setDrawMode(this.value)">
+                <option value="brush">🖌️ 画笔</option>
+                <option value="single">📍 单格绘制</option>
+                <option value="rect" selected>⬜ 矩形填充</option>
+                <option value="fill">🪣 填充工具</option>
+              </select>
+            </div>
+
+            <!-- AI功能 -->
+            <div class="section">
+              <label>🤖 AI 功能</label>
+              <button onclick="mapApp.showAIGenerateModal()" class="btn btn-success btn-block">
+                🎨 AI生成地图模板
+              </button>
+              <button onclick="mapApp.showLoadMapModal()" class="btn btn-primary btn-block">
+                📂 加载已保存的地图
+              </button>
+              <button onclick="mapApp.showTileMappingPanel()" class="btn btn-warning btn-block">
+                🎨 颜色-Tile映射
+              </button>
+              <button onclick="mapApp.showAIFillModal()" class="btn btn-secondary btn-block">
+                ✨ AI自动填充
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- 中间：地图画布 -->
+        <section class="canvas-area">
+          <div class="canvas-container">
+            <canvas id="mapCanvas"></canvas>
+          </div>
+          <div class="canvas-info">
+            <span>网格: <strong id="gridInfo">64 × 64</strong></span>
+            <span>|</span>
+            <span>鼠标: (<strong id="mousePos">0, 0</strong>)</span>
+            <span>|</span>
+            <span>缩放: <strong id="zoomLevel">100%</strong></span>
+          </div>
+        </section>
+
+        <!-- 右侧：区域列表和映射面板 -->
+        <aside class="regions-sidebar">
+          
+          <!-- Tile映射管理面板 -->
+          <div id="tileMappingPanel" class="panel" style="display: none;">
+            <div class="panel-header-with-close">
+              <h3>🎨 颜色-Tile映射</h3>
+              <button onclick="mapApp.closeTileMappingPanel()" class="btn-icon">×</button>
+            </div>
+            
+            <div class="panel-body">
+              <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">
+                为每种颜色指定对应的Tile，完成后一键应用到地图。
+              </p>
+              
+              <div id="colorMappingList" class="color-mapping-list">
+                <!-- 动态生成 -->
+              </div>
+            </div>
+            
+            <div class="panel-actions">
+              <button onclick="mapApp.applyTileMapping()" class="btn btn-primary btn-block">
+                ✨ 应用映射到地图
+              </button>
+              <button onclick="mapApp.clearTileMapping()" class="btn btn-secondary btn-block">
+                🗑️ 清除所有映射
+              </button>
+            </div>
+          </div>
+        
+        <!-- 右侧：区域列表 -->
+          <!-- 区域详情编辑面板 -->
+          <div id="regionDetailPanel" class="panel" style="display: none;">
+            <div class="panel-header-with-close">
+              <h3>🎯 区域详情</h3>
+              <button onclick="mapApp.closeRegionDetail()" class="btn-icon">×</button>
+            </div>
+            
+            <div class="panel-body">
+              <div class="form-group">
+                <label>区域名称</label>
+                <input type="text" id="regionDetailName" placeholder="例如：客厅、卧室、花园" />
+              </div>
+              
+              <div class="form-group">
+                <label>区域描述</label>
+                <textarea id="regionDetailDescription" rows="3" placeholder="描述这个区域的用途、特点..."></textarea>
+              </div>
+              
+              <div class="form-group">
+                <label>区域范围</label>
+                <div class="region-bounds-display">
+                  <span id="regionDetailBounds">-</span>
+                  <button onclick="mapApp.autoSelectSameColor()" class="btn btn-sm" title="自动框选所有相邻的同色瓦片">🪄 扩展同色</button>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label>颜色标识</label>
+                <input type="color" id="regionDetailColor" value="#FF6B6B" />
+              </div>
+              
+              <div class="form-group">
+                <label>自定义属性 
+                  <button onclick="mapApp.addRegionProperty()" class="btn-text">+ 添加</button>
+                </label>
+                <div id="regionPropertiesList" class="properties-list">
+                  <!-- 动态生成 -->
+                </div>
+              </div>
+              
+              <div class="panel-actions">
+                <button onclick="mapApp.saveRegionDetail()" class="btn btn-primary btn-block">💾 保存区域</button>
+                <button onclick="mapApp.deleteCurrentRegion()" class="btn btn-danger btn-block">🗑️ 删除区域</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 区域列表 -->
+          <div class="panel">
+            <h3>📍 定义的区域 (<span id="regionsCount">0</span>)</h3>
+            <div id="regionsList" class="regions-list">
+              <div class="empty-hint">暂无定义的区域</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>📊 图层预览</h3>
+            <div id="layersPreview" class="layers-preview">
+              <div class="empty-hint">使用AI分层后显示</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <!-- 模态框容器 -->
+  <div id="modalContainer"></div>
+
+  <script src="/map-creator/app.js"></script>
+</body>
+</html>
+

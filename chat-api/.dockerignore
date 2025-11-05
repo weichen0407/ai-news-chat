@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+README-APP.md
+CHANGELOG.md
+QUICK-START.md
+START.md
+*.md
+.DS_Store
+db/*.db-journal
+db/*.db-wal
+db/*.db-shm
+
