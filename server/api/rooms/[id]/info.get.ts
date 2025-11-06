@@ -31,6 +31,10 @@ export default defineEventHandler(async (event) => {
     'SELECT * FROM npcs WHERE room_id = ?'
   ).all(roomId)
   
+  // 获取 jerry 用户的 ID
+  const jerryUser = db.prepare('SELECT id FROM users WHERE username = ?').get('jerry') as any
+  const isPresetRoom = jerryUser && room.creator_id === jerryUser.id
+  
   // 检查是否是房间成员
   const member = db.prepare(
     'SELECT * FROM room_members WHERE room_id = ? AND user_id = ?'
@@ -47,8 +51,8 @@ export default defineEventHandler(async (event) => {
   // 是否是创建者
   const isCreator = room.creator_id === user.id
   
-  // 是否是成员
-  const isMember = !!member
+  // 是否是成员（预设房间所有人都算成员）
+  const isMember = isPresetRoom || !!member
   
   return {
     success: true,

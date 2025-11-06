@@ -16,13 +16,31 @@ export default defineEventHandler(async (event) => {
   
   const db = getDB()
   
-  // 检查是否是房间成员
-  const member = db.prepare(
-    'SELECT role_name FROM room_members WHERE room_id = ? AND user_id = ?'
-  ).get(roomId, user.id) as any
+  // 检查房间是否存在
+  const room = db.prepare('SELECT creator_id FROM rooms WHERE id = ?').get(roomId) as any
+  if (!room) {
+    return { success: false, error: '房间不存在' }
+  }
   
-  if (!member) {
-    return { success: false, error: '你不是该房间成员' }
+  // 获取 jerry 用户的 ID
+  const jerryUser = db.prepare('SELECT id FROM users WHERE username = ?').get('jerry') as any
+  const isPresetRoom = jerryUser && room.creator_id === jerryUser.id
+  
+  // 检查是否是房间成员（预设房间除外）
+  let member = null
+  if (!isPresetRoom) {
+    member = db.prepare(
+      'SELECT role_name FROM room_members WHERE room_id = ? AND user_id = ?'
+    ).get(roomId, user.id) as any
+    
+    if (!member) {
+      return { success: false, error: '你不是该房间成员' }
+    }
+  } else {
+    // 预设房间：尝试获取成员信息，如果没有则使用用户默认信息
+    member = db.prepare(
+      'SELECT role_name FROM room_members WHERE room_id = ? AND user_id = ?'
+    ).get(roomId, user.id) as any
   }
   
   // 插入消息
@@ -33,7 +51,7 @@ export default defineEventHandler(async (event) => {
       roomId,
       'user',
       user.id,
-      member.role_name || user.nickname,
+      member?.role_name || user.nickname,
       user.avatar || null,
       content
     )

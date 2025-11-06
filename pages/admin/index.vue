@@ -7,7 +7,7 @@
         <div class="header-actions-right">
           <span class="user-info">👤 {{ currentUser }}</span>
           <button @click="logout" class="btn-logout">🚪 退出</button>
-          <button @click="goBack" class="btn-back">← 返回</button>
+        <button @click="goBack" class="btn-back">← 返回</button>
         </div>
       </div>
 

@@ -26,15 +26,28 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: "房间不存在" };
   }
 
+  // 获取 jerry 用户的 ID
+  const jerryUser = db.prepare('SELECT id FROM users WHERE username = ?').get('jerry') as any;
+  const isPresetRoom = jerryUser && room.creator_id === jerryUser.id;
+
   // 获取我的角色信息
-  const member = db
+  let member = db
     .prepare(
       "SELECT role_name, role_profile FROM room_members WHERE room_id = ? AND user_id = ?"
     )
     .get(roomId, user.id) as any;
 
-  if (!member) {
+  // 如果不是预设房间且不是成员，返回错误
+  if (!isPresetRoom && !member) {
     return { success: false, error: "你不是该房间成员" };
+  }
+
+  // 如果是预设房间但没有成员记录，使用默认值
+  if (isPresetRoom && !member) {
+    member = {
+      role_name: user.nickname,
+      role_profile: "普通用户"
+    };
   }
 
   // 获取最近聊天记录
