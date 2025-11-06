@@ -62,7 +62,7 @@ try {
   chatDb.exec(`
     CREATE TABLE IF NOT EXISTS moments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      room_id TEXT NOT NULL,
+      room_id TEXT,
       user_id INTEGER,
       npc_id INTEGER,
       content TEXT NOT NULL,
@@ -129,6 +129,40 @@ try {
       console.log('⚠️  检测到 moments 表缺少 room_id 字段，正在添加...')
       chatDb.exec(`ALTER TABLE moments ADD COLUMN room_id TEXT`)
       console.log('✅ room_id 字段添加成功')
+    } else {
+      // 检查 room_id 是否有 NOT NULL 约束
+      const roomIdCol = momentsInfo.find(col => col.name === 'room_id')
+      if (roomIdCol && roomIdCol.notnull === 1) {
+        console.log('⚠️  检测到 room_id 有 NOT NULL 约束，需要移除约束...')
+        // SQLite 不支持直接修改约束，需要重建表
+        chatDb.exec(`
+          BEGIN TRANSACTION;
+          
+          -- 创建新表（room_id 允许 NULL）
+          CREATE TABLE moments_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id TEXT,
+            user_id INTEGER,
+            npc_id INTEGER,
+            content TEXT NOT NULL,
+            images TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- 复制数据
+          INSERT INTO moments_new (id, room_id, user_id, npc_id, content, images, created_at)
+          SELECT id, room_id, user_id, npc_id, content, images, created_at FROM moments;
+          
+          -- 删除旧表
+          DROP TABLE moments;
+          
+          -- 重命名新表
+          ALTER TABLE moments_new RENAME TO moments;
+          
+          COMMIT;
+        `)
+        console.log('✅ room_id NOT NULL 约束已移除')
+      }
     }
     
     // 检查 moment_likes 表结构

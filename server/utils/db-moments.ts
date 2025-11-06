@@ -11,17 +11,16 @@ export function initMomentsTables() {
   const db = new Database(dbPath)
   
   try {
-    // 朋友圈内容表
+    // 朋友圈内容表（room_id 允许为空，支持全局朋友圈）
     db.exec(`
       CREATE TABLE IF NOT EXISTS moments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id TEXT NOT NULL,
+        room_id TEXT,
         user_id INTEGER,
         npc_id INTEGER,
         content TEXT NOT NULL,
         images TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (room_id) REFERENCES rooms(room_id)
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `)
     
