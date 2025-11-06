@@ -6,16 +6,17 @@ import { join } from 'path'
 import { getCurrentUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  const user = await getCurrentUser(event)
-
-  if (!user) {
-    throw createError({
-      statusCode: 401,
-      message: '请先登录'
-    })
-  }
-
   try {
+    const user = await getCurrentUser(event)
+
+    // 如果用户未登录，直接返回成功（没有需要标记的）
+    if (!user) {
+      return {
+        success: true,
+        message: '未登录用户无需标记'
+      }
+    }
+
     const chatDb = new Database(join(process.cwd(), 'data', 'chat.db'))
 
     // 确保表存在

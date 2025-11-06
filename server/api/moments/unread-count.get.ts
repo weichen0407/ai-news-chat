@@ -6,16 +6,18 @@ import { join } from 'path'
 import { getCurrentUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  const user = await getCurrentUser(event)
-
-  if (!user) {
-    throw createError({
-      statusCode: 401,
-      message: '请先登录'
-    })
-  }
-
   try {
+    const user = await getCurrentUser(event)
+
+    // 如果用户未登录，返回 0 未读数
+    if (!user) {
+      return {
+        success: true,
+        count: 0,
+        message: '未登录'
+      }
+    }
+
     const chatDb = new Database(join(process.cwd(), 'data', 'chat.db'))
     const appDb = new Database(join(process.cwd(), 'data', 'app.db'))
 
