@@ -58,29 +58,27 @@ try {
   const chatDb = new Database(chatDbPath)
   console.log('✅ 朋友圈数据库连接成功')
   
-  // 创建朋友圈相关表
+  // 创建朋友圈相关表（与 server/utils/db-moments.ts 保持一致）
   chatDb.exec(`
     CREATE TABLE IF NOT EXISTS moments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id TEXT NOT NULL,
       user_id INTEGER,
       npc_id INTEGER,
-      author_type TEXT NOT NULL,
       content TEXT NOT NULL,
       images TEXT,
-      like_count INTEGER DEFAULT 0,
-      comment_count INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `)
   
   chatDb.exec(`
     CREATE TABLE IF NOT EXISTS moment_likes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       moment_id INTEGER NOT NULL,
       user_id INTEGER,
       npc_id INTEGER,
-      liker_type TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(moment_id, user_id, npc_id, liker_type)
+      UNIQUE(moment_id, user_id, npc_id)
     )
   `)
   
@@ -90,9 +88,20 @@ try {
       moment_id INTEGER NOT NULL,
       user_id INTEGER,
       npc_id INTEGER,
-      commenter_type TEXT NOT NULL,
+      reply_to_user_id INTEGER,
+      reply_to_npc_id INTEGER,
       content TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  chatDb.exec(`
+    CREATE TABLE IF NOT EXISTS moment_read_status (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      room_id TEXT NOT NULL,
+      last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, room_id)
     )
   `)
   
@@ -100,24 +109,67 @@ try {
     CREATE TABLE IF NOT EXISTS moment_notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
-      moment_id INTEGER NOT NULL,
       type TEXT NOT NULL,
-      actor_id INTEGER NOT NULL,
-      actor_type TEXT NOT NULL,
+      moment_id INTEGER,
+      actor_id INTEGER,
+      actor_type TEXT,
       is_read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `)
   
-  chatDb.exec(`
-    CREATE TABLE IF NOT EXISTS moment_read_status (
-      user_id INTEGER NOT NULL,
-      last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_id)
-    )
-  `)
-  
   console.log('✅ 朋友圈表结构创建完成')
+  
+  // 数据库迁移：检查并添加缺失的字段
+  try {
+    const momentsInfo = chatDb.pragma('table_info(moments)')
+    const hasRoomId = momentsInfo.some(col => col.name === 'room_id')
+    
+    if (!hasRoomId) {
+      console.log('⚠️  检测到 moments 表缺少 room_id 字段，正在添加...')
+      chatDb.exec(`ALTER TABLE moments ADD COLUMN room_id TEXT`)
+      console.log('✅ room_id 字段添加成功')
+    }
+    
+    // 检查 moment_likes 表结构
+    const likesInfo = chatDb.pragma('table_info(moment_likes)')
+    const likesHasId = likesInfo.some(col => col.name === 'id')
+    
+    if (!likesHasId) {
+      console.log('⚠️  moment_likes 表结构需要更新，正在重建...')
+      chatDb.exec(`
+        DROP TABLE IF EXISTS moment_likes_old;
+        ALTER TABLE moment_likes RENAME TO moment_likes_old;
+        CREATE TABLE moment_likes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          moment_id INTEGER NOT NULL,
+          user_id INTEGER,
+          npc_id INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(moment_id, user_id, npc_id)
+        );
+        INSERT INTO moment_likes (moment_id, user_id, npc_id, created_at)
+        SELECT moment_id, user_id, npc_id, created_at FROM moment_likes_old;
+        DROP TABLE moment_likes_old;
+      `)
+      console.log('✅ moment_likes 表更新完成')
+    }
+    
+    // 检查 moment_comments 表是否有 reply_to 字段
+    const commentsInfo = chatDb.pragma('table_info(moment_comments)')
+    const hasReplyToUserId = commentsInfo.some(col => col.name === 'reply_to_user_id')
+    
+    if (!hasReplyToUserId) {
+      console.log('⚠️  moment_comments 表缺少回复字段，正在添加...')
+      chatDb.exec(`ALTER TABLE moment_comments ADD COLUMN reply_to_user_id INTEGER`)
+      chatDb.exec(`ALTER TABLE moment_comments ADD COLUMN reply_to_npc_id INTEGER`)
+      console.log('✅ moment_comments 表更新完成')
+    }
+    
+  } catch (error) {
+    console.error('⚠️  数据库迁移过程中出现错误:', error.message)
+    // 继续启动，不要因为迁移失败而中断
+  }
   
   chatDb.close()
   
