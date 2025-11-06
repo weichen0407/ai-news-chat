@@ -174,23 +174,27 @@ export function importInitialData(db) {
     
     // 如果有用户或房间但没有消息，说明是旧版本的数据，需要清理重新导入
     if (userCount.count > 0 || roomCount.count > 0) {
-      console.log('   ⚠️  检测到旧版本数据，清理后重新导入...')
-      // 清理旧数据
-      const tablesToClean = [
+      console.log('   ⚠️  检测到旧版本数据，删除旧表并重建...')
+      // 删除旧表（包括表结构）
+      const tablesToDrop = [
         'moment_comments', 'moment_likes', 'moments',
         'friendships', 'room_members', 'messages', 
         'npcs', 'rooms', 'sessions', 'users'
       ]
       
-      for (const table of tablesToClean) {
+      for (const table of tablesToDrop) {
         try {
-          db.prepare(`DELETE FROM ${table}`).run()
-          console.log(`      🗑️  清理表 ${table}`)
+          db.prepare(`DROP TABLE IF EXISTS ${table}`).run()
+          console.log(`      🗑️  删除旧表 ${table}`)
         } catch (e) {
-          console.log(`      ⚠️  表 ${table} 不存在或清理失败`)
+          console.log(`      ⚠️  删除表 ${table} 失败: ${e.message}`)
         }
       }
-      console.log('   ✅ 旧数据清理完成')
+      console.log('   ✅ 旧表删除完成，将重新创建表结构...')
+      
+      // 重新创建表结构
+      createTables(db)
+      console.log('   ✅ 新表结构创建完成')
     }
     
     // 读取初始数据文件
