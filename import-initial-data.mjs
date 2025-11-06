@@ -26,7 +26,7 @@ function createTables(db) {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       description TEXT,
-      event_background TEXT NOT NULL,
+      event_background TEXT DEFAULT '',
       dialogue_density INTEGER DEFAULT 2,
       avatar TEXT DEFAULT '聊',
       created_by INTEGER NOT NULL,
@@ -205,20 +205,22 @@ export function importInitialData(db) {
       // 2. 导入房间
       if (initialData.data.rooms?.length > 0) {
         const insertRoom = db.prepare(`
-          INSERT INTO rooms (id, name, description, avatar, created_by, created_at, auto_mode, dialogue_density)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO rooms (id, name, description, event_background, avatar, created_by, created_at, auto_mode, dialogue_density, preset_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
         
         for (const room of initialData.data.rooms) {
           insertRoom.run(
             room.id,
             room.name,
-            room.description,
-            room.avatar,
+            room.description || '',
+            room.event_background || room.description || '',
+            room.avatar || '聊',
             room.created_by,
             room.created_at,
             room.auto_mode || 0,
-            room.dialogue_density || 2
+            room.dialogue_density || 2,
+            room.preset_id || null
           )
         }
         console.log(`      ✅ 导入了 ${initialData.data.rooms.length} 个房间`)
