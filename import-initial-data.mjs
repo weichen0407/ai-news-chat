@@ -3,10 +3,162 @@ import Database from 'better-sqlite3'
 import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
+// 创建所有必需的表结构
+function createTables(db) {
+  console.log('   📝 创建数据库表结构...')
+  
+  // 用户表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      nickname TEXT NOT NULL,
+      avatar TEXT,
+      signature TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  // 房间表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS rooms (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      event_background TEXT NOT NULL,
+      dialogue_density INTEGER DEFAULT 2,
+      avatar TEXT DEFAULT '聊',
+      created_by INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      preset_id TEXT,
+      auto_mode INTEGER DEFAULT 0
+    )
+  `)
+  
+  // NPC角色表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS npcs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      avatar TEXT,
+      profile TEXT NOT NULL,
+      persona TEXT,
+      personality TEXT,
+      habits TEXT,
+      skills TEXT,
+      likes TEXT,
+      dislikes TEXT,
+      age INTEGER,
+      occupation TEXT,
+      background TEXT,
+      goals TEXT,
+      fears TEXT,
+      story_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  // 房间成员表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS room_members (
+      room_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      role_name TEXT,
+      role_profile TEXT,
+      avatar TEXT,
+      last_read_at DATETIME,
+      UNIQUE(room_id, user_id)
+    )
+  `)
+  
+  // 消息表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id TEXT NOT NULL,
+      sender_type TEXT NOT NULL,
+      sender_id INTEGER,
+      sender_name TEXT NOT NULL,
+      avatar TEXT,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  // Session表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL
+    )
+  `)
+  
+  // 好友关系表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS friendships (
+      user_id INTEGER NOT NULL,
+      friend_user_id INTEGER,
+      friend_npc_id INTEGER,
+      friend_type TEXT NOT NULL,
+      status TEXT DEFAULT 'accepted',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  // 朋友圈表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS moments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      npc_id INTEGER,
+      author_type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      images TEXT,
+      like_count INTEGER DEFAULT 0,
+      comment_count INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  // 朋友圈点赞表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS moment_likes (
+      moment_id INTEGER NOT NULL,
+      user_id INTEGER,
+      npc_id INTEGER,
+      liker_type TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(moment_id, user_id, npc_id, liker_type)
+    )
+  `)
+  
+  // 朋友圈评论表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS moment_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      moment_id INTEGER NOT NULL,
+      user_id INTEGER,
+      npc_id INTEGER,
+      commenter_type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  console.log('   ✅ 表结构创建完成')
+}
+
 export function importInitialData(db) {
   console.log('📥 检查是否需要导入初始数据...')
   
   try {
+    // 先创建表结构
+    createTables(db)
+    
     // 检查数据库是否已有数据
     const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get()
     const roomCount = db.prepare('SELECT COUNT(*) as count FROM rooms').get()
