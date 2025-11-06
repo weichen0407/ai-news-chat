@@ -152,14 +152,18 @@ function createTables(db) {
 
 export function importInitialData(db) {
   console.log('📥 检查是否需要导入初始数据...')
+  console.log('   📍 当前工作目录:', process.cwd())
   
   try {
     // 先创建表结构
+    console.log('   📝 开始创建表结构...')
     createTables(db)
     
     // 检查数据库是否已有数据
+    console.log('   🔍 检查现有数据...')
     const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get()
     const roomCount = db.prepare('SELECT COUNT(*) as count FROM rooms').get()
+    console.log(`   📊 现有数据：用户 ${userCount.count} 个，房间 ${roomCount.count} 个`)
     
     if (userCount.count > 0 || roomCount.count > 0) {
       console.log('   ℹ️  数据库已有数据，跳过导入')
@@ -168,13 +172,22 @@ export function importInitialData(db) {
     
     // 读取初始数据文件
     const dataPath = join(process.cwd(), 'server/data/initial-data.json')
+    console.log('   📂 数据文件路径:', dataPath)
+    
     if (!existsSync(dataPath)) {
-      console.log('   ℹ️  未找到初始数据文件，跳过导入')
+      console.log('   ⚠️  未找到初始数据文件，跳过导入')
+      console.log('   💡 提示：请确保 server/data/initial-data.json 文件存在')
       return
     }
     
     console.log('   📂 读取初始数据文件...')
     const initialData = JSON.parse(readFileSync(dataPath, 'utf-8'))
+    console.log('   ✅ 数据文件读取成功')
+    console.log('   📊 数据统计:')
+    console.log(`      - 用户: ${initialData.data.users?.length || 0}`)
+    console.log(`      - 房间: ${initialData.data.rooms?.length || 0}`)
+    console.log(`      - NPC: ${initialData.data.npcs?.length || 0}`)
+    console.log(`      - 消息: ${initialData.data.messages?.length || 0}`)
     
     console.log('   🔄 开始导入数据...')
     
@@ -183,8 +196,8 @@ export function importInitialData(db) {
       // 1. 导入用户
       if (initialData.data.users?.length > 0) {
         const insertUser = db.prepare(`
-          INSERT INTO users (id, username, password, nickname, avatar, created_at)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO users (id, username, password, nickname, avatar, signature, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `)
         
         for (const user of initialData.data.users) {
@@ -193,7 +206,8 @@ export function importInitialData(db) {
             user.username,
             user.password,
             user.nickname,
-            user.avatar,
+            user.avatar || null,
+            user.signature || '',
             user.created_at
           )
         }
@@ -370,13 +384,21 @@ export function importInitialData(db) {
       }
     })
     
+    console.log('   🚀 执行数据导入事务...')
     importTransaction()
     
     console.log('   ✅ 初始数据导入完成！')
+    console.log('\n🎉 数据库初始化成功！所有数据已就绪。\n')
     
   } catch (error) {
-    console.error('   ❌ 导入数据失败:', error.message)
-    console.error('   继续启动应用...')
+    console.error('\n❌ 导入初始数据失败!')
+    console.error('   错误类型:', error.constructor.name)
+    console.error('   错误信息:', error.message)
+    if (error.stack) {
+      console.error('   错误堆栈:', error.stack.split('\n').slice(0, 5).join('\n'))
+    }
+    console.error('\n⚠️  应用将继续启动，但数据库可能为空')
+    console.error('💡 请检查以上错误信息，修复后重新部署\n')
   }
 }
 
