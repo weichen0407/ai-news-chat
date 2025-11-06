@@ -110,6 +110,63 @@ function initDB() {
     )
   `)
   
+  // 朋友圈表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS moments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      npc_id INTEGER,
+      author_type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      images TEXT,
+      like_count INTEGER DEFAULT 0,
+      comment_count INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  // 朋友圈点赞表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS moment_likes (
+      moment_id INTEGER NOT NULL,
+      user_id INTEGER,
+      npc_id INTEGER,
+      liker_type TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(moment_id, user_id, npc_id, liker_type)
+    )
+  `)
+  
+  // 朋友圈评论表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS moment_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      moment_id INTEGER NOT NULL,
+      user_id INTEGER,
+      npc_id INTEGER,
+      commenter_type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
+  // 自动控制配置表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS auto_control_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER DEFAULT 1,
+      max_tokens_per_hour INTEGER DEFAULT 10000,
+      max_tokens_per_day INTEGER DEFAULT 50000,
+      require_online_users INTEGER DEFAULT 0,
+      active_hours_start INTEGER DEFAULT 0,
+      active_hours_end INTEGER DEFAULT 24,
+      moments_enabled INTEGER DEFAULT 1,
+      moments_post_interval INTEGER DEFAULT 7200,
+      moments_comment_interval INTEGER DEFAULT 1800,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  
   // 数据库迁移：添加新字段
   try {
     // 检查 rooms 表是否有 event_background 字段
