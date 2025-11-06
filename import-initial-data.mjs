@@ -163,11 +163,34 @@ export function importInitialData(db) {
     console.log('   🔍 检查现有数据...')
     const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get()
     const roomCount = db.prepare('SELECT COUNT(*) as count FROM rooms').get()
-    console.log(`   📊 现有数据：用户 ${userCount.count} 个，房间 ${roomCount.count} 个`)
+    const messageCount = db.prepare('SELECT COUNT(*) as count FROM messages').get()
+    console.log(`   📊 现有数据：用户 ${userCount.count} 个，房间 ${roomCount.count} 个，消息 ${messageCount.count} 条`)
     
-    if (userCount.count > 0 || roomCount.count > 0) {
-      console.log('   ℹ️  数据库已有数据，跳过导入')
+    // 如果有消息数据，说明已经导入过了
+    if (messageCount.count > 0) {
+      console.log('   ℹ️  数据库已有完整数据，跳过导入')
       return
+    }
+    
+    // 如果有用户或房间但没有消息，说明是旧版本的数据，需要清理重新导入
+    if (userCount.count > 0 || roomCount.count > 0) {
+      console.log('   ⚠️  检测到旧版本数据，清理后重新导入...')
+      // 清理旧数据
+      const tablesToClean = [
+        'moment_comments', 'moment_likes', 'moments',
+        'friendships', 'room_members', 'messages', 
+        'npcs', 'rooms', 'sessions', 'users'
+      ]
+      
+      for (const table of tablesToClean) {
+        try {
+          db.prepare(`DELETE FROM ${table}`).run()
+          console.log(`      🗑️  清理表 ${table}`)
+        } catch (e) {
+          console.log(`      ⚠️  表 ${table} 不存在或清理失败`)
+        }
+      }
+      console.log('   ✅ 旧数据清理完成')
     }
     
     // 读取初始数据文件
