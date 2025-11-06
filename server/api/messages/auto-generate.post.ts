@@ -1,5 +1,6 @@
 import { getDB } from "~/server/utils/db";
 import { getCurrentUser } from "~/server/utils/auth";
+import { canGenerate, recordTokenUsage, estimateTokens } from "~/server/utils/auto-control";
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
@@ -10,10 +11,19 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { roomId, rounds = 1 } = body;
+  const { roomId, rounds = 1, skipCheck = false } = body;
 
   if (!roomId) {
     return { success: false, error: "缺少房间ID" };
+  }
+
+  // 智能控制检查（手动触发时可跳过）
+  if (!skipCheck) {
+    const checkResult = canGenerate();
+    if (!checkResult.allowed) {
+      console.log(`⏸️ 自动生成被阻止: ${checkResult.reason}`);
+      return { success: false, error: checkResult.reason, blocked: true };
+    }
   }
 
   const db = getDB();
@@ -24,6 +34,11 @@ export default defineEventHandler(async (event) => {
     .get(roomId) as any;
   if (!room) {
     return { success: false, error: "房间不存在" };
+  }
+  
+  // 检查房间的自动模式
+  if (!skipCheck && room.auto_mode !== 1) {
+    return { success: false, error: "房间未开启自动模式", blocked: true };
   }
 
   // 获取NPC列表
@@ -199,6 +214,16 @@ ${currentHistory || "（群聊刚刚开始）"}
 
     console.log("=== 自主对话生成结束 ===");
     console.log(`共生成 ${allGeneratedMessages.length} 条对话\n`);
+
+    // 记录token使用（估算）
+    if (!skipCheck) {
+      const totalTokens = allGeneratedMessages.reduce((sum, msg) => {
+        return sum + estimateTokens(msg.message);
+      }, 0);
+      // 加上prompt的token（估算为生成内容的2倍）
+      const estimatedTotal = totalTokens * 3;
+      recordTokenUsage(estimatedTotal);
+    }
 
     return {
       success: true,

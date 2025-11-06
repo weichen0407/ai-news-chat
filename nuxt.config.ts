@@ -8,11 +8,29 @@ export default defineNuxtConfig({
     public: {},
   },
 
+  // 开发服务器配置 - 允许外部访问
+  devServer: {
+    host: "0.0.0.0", // 监听所有网络接口
+    port: 3000, // 使用3000端口
+  },
+
   // Railway会自动设置PORT环境变量
   nitro: {
     preset: "node-server",
     minify: true,
     sourceMap: false,
+  },
+
+  // 配置 Vue Router 忽略 socket.io 路径
+  router: {
+    options: {
+      strict: false,
+    },
+  },
+
+  // 配置路由规则，避免 socket.io 警告
+  routeRules: {
+    "/socket.io/**": { ssr: false, redirect: false },
   },
 
   app: {
@@ -33,6 +51,14 @@ export default defineNuxtConfig({
             [v-cloak] { display: none; }
           `,
           type: "text/css",
+        },
+      ],
+      // 添加朋友圈助手脚本
+      script: [
+        {
+          src: "/moments-helper.js",
+          type: "text/javascript",
+          defer: true,
         },
       ],
     },

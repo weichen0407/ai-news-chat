@@ -10,6 +10,14 @@
         </div>
         <div class="header-actions">
           <button
+            onclick="window.momentsHelper?.goToMoments()"
+            class="btn-moments"
+            title="查看朋友圈"
+          >
+            🎭 朋友圈
+            <span class="unread-badge" style="display: none;"></span>
+          </button>
+          <button
             v-if="isCreator"
             @click="toggleAutoMode"
             :class="['btn-auto', { active: isAutoMode }]"
@@ -39,6 +47,15 @@
 
       <!-- 聊天消息区 -->
       <div class="messages-container" ref="messagesContainer">
+        <!-- 加载更多提示 -->
+        <div v-if="hasMoreMessages" class="load-more-hint">
+          <span v-if="isLoadingMore" class="loading-spinner">⏳ 加载中...</span>
+          <span v-else class="hint-text">👆 滚动到顶部加载更多历史消息</span>
+        </div>
+        <div v-else-if="messages.length > 0" class="no-more-hint">
+          📜 已显示全部消息
+        </div>
+        
         <!-- 普通消息显示 -->
         <div
           v-for="(msg, index) in messages"
@@ -50,11 +67,15 @@
               : 'other'
           ]"
         >
-          <img
-            :src="msg.avatar || '/avatars/placeholder.svg'"
-            :alt="msg.sender_name"
-            class="avatar"
-          />
+          <div class="avatar">
+            <img
+              v-if="isImageAvatar(msg.avatar)"
+              :src="msg.avatar"
+              :alt="msg.sender_name"
+              class="avatar-img"
+            />
+            <span v-else class="avatar-text">{{ msg.avatar || '👤' }}</span>
+          </div>
           <div class="message-content">
             <div class="sender-name">{{ msg.sender_name }}</div>
             <div class="message-bubble">{{ msg.content }}</div>
@@ -65,11 +86,15 @@
         <!-- 打字中提示 -->
         <div v-if="typingNPC" class="typing-indicator">
           <div class="typing-avatar">
-            <img
-              :src="typingNPC.avatar || '/avatars/placeholder.svg'"
-              :alt="typingNPC.name"
-              class="avatar"
-            />
+            <div class="avatar">
+              <img
+                v-if="isImageAvatar(typingNPC.avatar)"
+                :src="typingNPC.avatar"
+                :alt="typingNPC.name"
+                class="avatar-img"
+              />
+              <span v-else class="avatar-text">{{ typingNPC.avatar || '👤' }}</span>
+            </div>
           </div>
           <div class="typing-content">
             <div class="sender-name">{{ typingNPC.name }}</div>
@@ -352,7 +377,7 @@
                   <div class="npc-avatar-section">
                     <div class="npc-avatar-display">
                       <img
-                        v-if="npc.avatar && !npc.avatar.startsWith('data:')"
+                        v-if="isImageAvatar(npc.avatar)"
                         :src="npc.avatar"
                         :alt="npc.name"
                         class="npc-avatar-img"
@@ -504,6 +529,16 @@
                       {{ member.role_name }}
                     </div>
                   </div>
+                  <!-- 添加好友按钮 -->
+                  <button
+                    v-if="member.user_id && member.user_id !== currentUserId"
+                    @click="addFriend(member)"
+                    :class="['btn-add-friend', { 'is-friend': member.is_friend }]"
+                    :title="member.is_friend ? '已添加' : '添加好友'"
+                    :disabled="member.is_friend || addingFriend === member.user_id"
+                  >
+                    {{ member.is_friend ? '✓' : '+' }}
+                  </button>
                 </div>
               </div>
             </div>
@@ -513,11 +548,15 @@
               <h4>🤖 AI角色 ({{ npcCount }})</h4>
               <div class="npcs-list">
                 <div v-for="npc in npcs" :key="npc.id" class="npc-item-info">
-                  <img
-                    :src="npc.avatar || '/avatars/placeholder.svg'"
-                    :alt="npc.name"
-                    class="npc-avatar-info"
-                  />
+                  <div class="npc-avatar-info">
+                    <img
+                      v-if="isImageAvatar(npc.avatar)"
+                      :src="npc.avatar"
+                      :alt="npc.name"
+                      class="npc-avatar-img-info"
+                    />
+                    <span v-else class="npc-avatar-emoji-info">{{ npc.avatar || '🤖' }}</span>
+                  </div>
                   <div class="npc-info">
                     <div class="npc-name">{{ npc.name }}</div>
                     <div class="npc-profile">{{ npc.profile }}</div>
@@ -549,7 +588,13 @@ const members = ref([]);
 const isCreator = ref(false);
 const currentUserId = ref(null);
 
+// 添加好友相关
+const addingFriend = ref(null);
+
 const messages = ref([]);
+const isLoadingMore = ref(false);
+const hasMoreMessages = ref(true);
+const isInitialLoad = ref(true);
 const command = ref("");
 const draftMessage = ref("");
 const isGenerating = ref(false);
@@ -563,6 +608,12 @@ let autoModeInterval = null;
 
 const messagesContainer = ref(null);
 const showSettings = ref(false);
+
+// 判断是否是图片头像（URL或base64）
+const isImageAvatar = (avatar) => {
+  if (!avatar) return false;
+  return avatar.startsWith('http') || avatar.startsWith('data:image') || avatar.startsWith('/');
+};
 const showEditModal = ref(false);
 const showRoomInfoModal = ref(false);
 const showAvatarPicker = ref(false);
@@ -626,10 +677,17 @@ onMounted(async () => {
   // 标记为已读
   await markAsRead();
   
+  // 绑定滚动事件监听
+  if (messagesContainer.value) {
+    messagesContainer.value.addEventListener('scroll', handleScroll);
+  }
+  
   // 开启消息轮询（每3秒检查新消息）
   messagePollingInterval = setInterval(async () => {
     const currentCount = messages.value.length;
-    await loadMessages();
+    
+    // 轮询时只加载最新消息（不使用loadMore）
+    await loadMessages(false);
     const newCount = messages.value.length;
     
     // 如果有新消息，滚动到底部
@@ -653,8 +711,13 @@ const loadRoomInfo = async () => {
     if (response.success) {
       roomInfo.value = response.room;
       npcs.value = response.npcs;
-      members.value = response.members;
+      members.value = response.members || [];
       isCreator.value = response.isCreator;
+      
+      // 获取好友关系状态
+      if (currentUserId.value) {
+        await loadFriendshipStatus();
+      }
       
       // 加载自动模式状态
       isAutoMode.value = response.room.auto_mode === 1;
@@ -700,14 +763,66 @@ const loadRoomInfo = async () => {
   }
 };
 
-const loadMessages = async () => {
+const loadMessages = async (loadMore = false) => {
+  if (isLoadingMore.value) return;
+  
   try {
-    const response = await $fetch(`/api/messages/${roomId}`);
+    isLoadingMore.value = true;
+    
+    // 保存当前滚动位置和容器高度
+    const container = messagesContainer.value;
+    const oldScrollHeight = container?.scrollHeight || 0;
+    const oldScrollTop = container?.scrollTop || 0;
+    
+    // 构建查询参数
+    let url = `/api/messages/${roomId}?limit=50`;
+    
+    // 如果是加载更多，获取当前最早消息的ID
+    if (loadMore && messages.value.length > 0) {
+      const oldestMessageId = messages.value[0].id;
+      url += `&beforeId=${oldestMessageId}`;
+    }
+    
+    const response = await $fetch(url);
+    
     if (response.success) {
-      messages.value = response.messages;
+      if (loadMore) {
+        // 加载更多：将新消息添加到数组开头
+        messages.value = [...response.messages, ...messages.value];
+        
+        // 恢复滚动位置
+        await nextTick();
+        if (container) {
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+        }
+      } else {
+        // 首次加载：直接替换
+        messages.value = response.messages;
+        isInitialLoad.value = false;
+        
+        // 滚动到底部
+        await nextTick();
+        scrollToBottom();
+      }
+      
+      hasMoreMessages.value = response.hasMore;
     }
   } catch (error) {
     console.error("加载消息失败:", error);
+  } finally {
+    isLoadingMore.value = false;
+  }
+};
+
+// 监听滚动事件，滚动到顶部时加载更多
+const handleScroll = () => {
+  const container = messagesContainer.value;
+  if (!container || isLoadingMore.value || !hasMoreMessages.value) return;
+  
+  // 如果滚动到顶部附近（50px内）
+  if (container.scrollTop < 50) {
+    loadMessages(true);
   }
 };
 
@@ -780,14 +895,66 @@ const sendMessage = async () => {
   }
 };
 
-const scrollToBottom = () => {
+const scrollToBottom = (smooth = false) => {
   if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+    messagesContainer.value.scrollTo({
+      top: messagesContainer.value.scrollHeight,
+      behavior: smooth ? 'smooth' : 'auto'
+    });
   }
 };
 
 const goBack = () => {
   router.push("/");
+};
+
+// 加载好友关系状态
+const loadFriendshipStatus = async () => {
+  try {
+    const response = await $fetch(`/api/friends/room-players?roomId=${roomId}&currentUserId=${currentUserId.value}`);
+    if (response.success && response.players) {
+      // 更新成员列表的好友状态
+      members.value = members.value.map(member => {
+        const player = response.players.find(p => p.user_id === member.user_id);
+        return {
+          ...member,
+          is_friend: player ? player.is_friend === 1 : false
+        };
+      });
+    }
+  } catch (error) {
+    console.error('获取好友状态失败:', error);
+  }
+};
+
+// 添加好友
+const addFriend = async (member) => {
+  if (addingFriend.value || member.is_friend) return;
+
+  try {
+    addingFriend.value = member.user_id;
+    
+    const response = await $fetch('/api/friends/add', {
+      method: 'POST',
+      body: {
+        friend_id: member.user_id
+      }
+    });
+
+    if (response.success) {
+      // 更新成员的好友状态
+      member.is_friend = true;
+      alert(`✅ 已添加 ${member.nickname} 为好友！`);
+      console.log('✅ 添加好友成功:', member.nickname);
+    } else {
+      throw new Error(response.error || '添加失败');
+    }
+  } catch (error) {
+    console.error('添加好友失败:', error);
+    alert(`❌ 添加好友失败: ${error.message}`);
+  } finally {
+    addingFriend.value = null;
+  }
 };
 
 const getDensityHint = () => {
@@ -935,8 +1102,15 @@ const triggerPlot = async () => {
 
 const formatTime = (dateStr) => {
   if (!dateStr) return "";
+  
+  // 获取北京时间
   const date = new Date(dateStr);
-  return `${date.getHours().toString().padStart(2, "0")}:${date
+  const utcTime = date.getTime();
+  const localOffset = date.getTimezoneOffset();
+  const beijingOffset = -480; // UTC+8 = -480分钟
+  const beijingTime = new Date(utcTime + (localOffset + beijingOffset) * 60 * 1000);
+  
+  return `${beijingTime.getHours().toString().padStart(2, "0")}:${beijingTime
     .getMinutes()
     .toString()
     .padStart(2, "0")}`;
@@ -1142,6 +1316,11 @@ const markAsRead = async () => {
 onUnmounted(async () => {
   stopAutoMode();
   
+  // 移除滚动事件监听
+  if (messagesContainer.value) {
+    messagesContainer.value.removeEventListener('scroll', handleScroll);
+  }
+  
   // 清理消息轮询
   if (messagePollingInterval) {
     clearInterval(messagePollingInterval);
@@ -1311,6 +1490,50 @@ onUnmounted(async () => {
   background: #ededed;
 }
 
+/* 加载更多提示样式 */
+.load-more-hint,
+.no-more-hint {
+  text-align: center;
+  padding: 0.8rem;
+  font-size: 0.9rem;
+  color: #999;
+  user-select: none;
+}
+
+.load-more-hint {
+  position: sticky;
+  top: 0;
+  background: rgba(237, 237, 237, 0.95);
+  backdrop-filter: blur(5px);
+  z-index: 10;
+  margin: -1rem -1rem 0.5rem;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.loading-spinner {
+  color: #1890ff;
+  font-weight: 500;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.hint-text {
+  opacity: 0.6;
+  font-size: 0.85rem;
+}
+
+.no-more-hint {
+  opacity: 0.5;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .message {
   display: flex;
   gap: 0.6rem;
@@ -1326,8 +1549,22 @@ onUnmounted(async () => {
   width: 32px;
   height: 32px;
   border-radius: 4px;
-  object-fit: cover;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+.avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar .avatar-text {
+  font-size: 1.2rem;
 }
 
 .message-content {
@@ -2230,8 +2467,22 @@ onUnmounted(async () => {
   width: 40px;
   height: 40px;
   border-radius: 6px;
-  object-fit: cover;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.npc-avatar-img-info {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.npc-avatar-emoji-info {
+  font-size: 1.5rem;
 }
 
 .member-info,
@@ -2261,5 +2512,76 @@ onUnmounted(async () => {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+}
+
+/* 朋友圈按钮样式 */
+.btn-moments {
+  position: relative;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.btn-moments:hover {
+  background: rgba(7, 193, 96, 0.1);
+}
+
+.unread-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* 添加好友按钮样式 */
+.btn-add-friend {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #07c160;
+  background: white;
+  color: #07c160;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-add-friend:hover:not(:disabled) {
+  background: #07c160;
+  color: white;
+  transform: scale(1.1);
+}
+
+.btn-add-friend:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-add-friend.is-friend {
+  background: #07c160;
+  color: white;
+  border-color: #07c160;
+}
+
+.member-item {
+  position: relative;
 }
 </style>

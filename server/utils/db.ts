@@ -63,7 +63,9 @@ function initDB() {
       user_id INTEGER NOT NULL,
       role_name TEXT,
       role_profile TEXT,
+      avatar TEXT,
       joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_read_at DATETIME,
       FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
       UNIQUE(room_id, user_id)
@@ -92,6 +94,19 @@ function initDB() {
       user_id INTEGER NOT NULL,
       expires_at INTEGER NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `)
+  
+  // 好友关系表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS friendships (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      friend_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(user_id, friend_id)
     )
   `)
   
@@ -127,6 +142,29 @@ function initDB() {
       db.exec(`ALTER TABLE users ADD COLUMN avatar TEXT`)
     }
     
+    // 检查 users 表是否有 signature 字段（个性签名）
+    const usersHasSignature = usersInfo.some((col: any) => col.name === 'signature')
+    
+    if (!usersHasSignature) {
+      console.log('📝 添加 users.signature 字段（个性签名）...')
+      db.exec(`ALTER TABLE users ADD COLUMN signature TEXT DEFAULT ''`)
+    }
+    
+    // 检查 room_members 表是否有 avatar 和 last_read_at 字段
+    const roomMembersInfo = db.pragma('table_info(room_members)')
+    const hasRoomMemberAvatar = roomMembersInfo.some((col: any) => col.name === 'avatar')
+    const hasLastReadAt = roomMembersInfo.some((col: any) => col.name === 'last_read_at')
+    
+    if (!hasRoomMemberAvatar) {
+      console.log('📝 添加 room_members.avatar 字段...')
+      db.exec(`ALTER TABLE room_members ADD COLUMN avatar TEXT`)
+    }
+    
+    if (!hasLastReadAt) {
+      console.log('📝 添加 room_members.last_read_at 字段...')
+      db.exec(`ALTER TABLE room_members ADD COLUMN last_read_at DATETIME`)
+    }
+    
     // 检查 rooms 表是否有 preset_id 和 auto_mode 字段
     const hasPresetId = roomsInfo.some((col: any) => col.name === 'preset_id')
     const hasAutoMode = roomsInfo.some((col: any) => col.name === 'auto_mode')
@@ -141,19 +179,29 @@ function initDB() {
       db.exec(`ALTER TABLE rooms ADD COLUMN auto_mode INTEGER DEFAULT 0`)
     }
     
-    // 检查 room_members 表是否有 last_read_at 和 avatar 字段
-    const membersInfo = db.pragma('table_info(room_members)')
-    const hasLastReadAt = membersInfo.some((col: any) => col.name === 'last_read_at')
-    const hasMemberAvatar = membersInfo.some((col: any) => col.name === 'avatar')
+    // 检查 npcs 表是否有所有必需字段
+    const npcsInfo = db.pragma('table_info(npcs)')
+    const npcColumns = npcsInfo.map((col: any) => col.name)
     
-    if (!hasLastReadAt) {
-      console.log('📝 添加 last_read_at 字段...')
-      db.exec(`ALTER TABLE room_members ADD COLUMN last_read_at DATETIME`)
-    }
+    const requiredNpcColumns = [
+      { name: 'persona', type: 'TEXT' },
+      { name: 'personality', type: 'TEXT' },
+      { name: 'habits', type: 'TEXT' },
+      { name: 'skills', type: 'TEXT' },
+      { name: 'likes', type: 'TEXT' },
+      { name: 'dislikes', type: 'TEXT' },
+      { name: 'age', type: 'INTEGER' },
+      { name: 'occupation', type: 'TEXT' },
+      { name: 'background', type: 'TEXT' },
+      { name: 'goals', type: 'TEXT' },
+      { name: 'fears', type: 'TEXT' }
+    ]
     
-    if (!hasMemberAvatar) {
-      console.log('📝 添加 room_members.avatar 字段...')
-      db.exec(`ALTER TABLE room_members ADD COLUMN avatar TEXT`)
+    for (const col of requiredNpcColumns) {
+      if (!npcColumns.includes(col.name)) {
+        console.log(`📝 添加 npcs.${col.name} 字段...`)
+        db.exec(`ALTER TABLE npcs ADD COLUMN ${col.name} ${col.type}`)
+      }
     }
     
     // 初始化jerry测试用户

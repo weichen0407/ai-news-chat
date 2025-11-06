@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>北京时间测试</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .time-row:last-child {
+      border-bottom: none;
+    }
+    
+    .label {
+      font-weight: 600;
+      color: #666;
+    }
+    
+    .value {
+      color: #333;
+      font-family: monospace;
+    }
+    
+    .highlight {
+      color: #667eea;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🕐 北京时间测试</h1>
+    <p>服务器时间 vs 北京时间（UTC+8）</p>
+  </div>
+
+  <div class="card">
+    <h2>当前时间对比</h2>
+    <div class="time-row">
+      <span class="label">服务器本地时间：</span>
+      <span class="value" id="localTime"></span>
+    </div>
+    <div class="time-row">
+      <span class="label">服务器UTC时间：</span>
+      <span class="value" id="utcTime"></span>
+    </div>
+    <div class="time-row">
+      <span class="label">北京时间 (UTC+8)：</span>
+      <span class="value highlight" id="beijingTime"></span>
+    </div>
+    <div class="time-row">
+      <span class="label">时区偏移：</span>
+      <span class="value" id="offset"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>时间格式化测试</h2>
+    <div id="formats"></div>
+  </div>
+
+  <div class="card">
+    <h2>相对时间测试</h2>
+    <div id="relatives"></div>
+  </div>
+
+  <script>
+    // 获取北京时间
+    function getBeijingTime(date) {
+      const d = date ? new Date(date) : new Date()
+      const utcTime = d.getTime()
+      const localOffset = d.getTimezoneOffset()
+      const beijingOffset = -480 // UTC+8 = -480分钟
+      return new Date(utcTime + (localOffset + beijingOffset) * 60 * 1000)
+    }
+
+    // 格式化日期时间
+    function formatDateTime(date) {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hour = String(date.getHours()).padStart(2, '0')
+      const minute = String(date.getMinutes()).padStart(2, '0')
+      const second = String(date.getSeconds()).padStart(2, '0')
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+    }
+
+    // 更新时间显示
+    function updateTimes() {
+      const now = new Date()
+      const utc = new Date(now.toUTCString())
+      const beijing = getBeijingTime()
+
+      document.getElementById('localTime').textContent = formatDateTime(now)
+      document.getElementById('utcTime').textContent = formatDateTime(utc)
+      document.getElementById('beijingTime').textContent = formatDateTime(beijing)
+      document.getElementById('offset').textContent = `UTC${now.getTimezoneOffset() > 0 ? '-' : '+'}${Math.abs(now.getTimezoneOffset() / 60)}`
+    }
+
+    // 格式化测试
+    function showFormats() {
+      const beijing = getBeijingTime()
+      const formatsDiv = document.getElementById('formats')
+      
+      const formats = [
+        { label: '完整日期时间', value: formatDateTime(beijing) },
+        { label: '日期', value: beijing.toLocaleDateString('zh-CN') },
+        { label: '时间', value: beijing.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) },
+        { label: '中文格式', value: `${beijing.getFullYear()}年${beijing.getMonth()+1}月${beijing.getDate()}日` }
+      ]
+      
+      formatsDiv.innerHTML = formats.map(f => `
+        <div class="time-row">
+          <span class="label">${f.label}：</span>
+          <span class="value">${f.value}</span>
+        </div>
+      `).join('')
+    }
+
+    // 相对时间测试
+    function showRelatives() {
+      const now = getBeijingTime()
+      const relativesDiv = document.getElementById('relatives')
+      
+      const testTimes = [
+        { label: '30秒前', time: new Date(now.getTime() - 30 * 1000) },
+        { label: '5分钟前', time: new Date(now.getTime() - 5 * 60 * 1000) },
+        { label: '2小时前', time: new Date(now.getTime() - 2 * 60 * 60 * 1000) },
+        { label: '昨天', time: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+        { label: '3天前', time: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
+        { label: '10天前', time: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000) }
+      ]
+      
+      relativesDiv.innerHTML = testTimes.map(t => {
+        const diff = now.getTime() - t.time.getTime()
+        const minutes = Math.floor(diff / 60000)
+        const hours = Math.floor(diff / 3600000)
+        const days = Math.floor(diff / 86400000)
+        
+        let display
+        if (minutes < 1) display = '刚刚'
+        else if (minutes < 60) display = `${minutes}分钟前`
+        else if (hours < 24) display = `${hours}小时前`
+        else if (days === 1) display = '昨天'
+        else if (days < 7) display = `${days}天前`
+        else display = formatDateTime(t.time).split(' ')[0]
+        
+        return `
+          <div class="time-row">
+            <span class="label">${t.label}：</span>
+            <span class="value highlight">${display}</span>
+          </div>
+        `
+      }).join('')
+    }
+
+    // 初始化
+    updateTimes()
+    showFormats()
+    showRelatives()
+    
+    // 每秒更新
+    setInterval(updateTimes, 1000)
+  </script>
+</body>
+</html>
+

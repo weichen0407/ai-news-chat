@@ -14,16 +14,7 @@ export default defineEventHandler(async (event) => {
   
   const db = getDB()
   
-  // 检查是否是房间成员
-  const member = db.prepare(
-    'SELECT * FROM room_members WHERE room_id = ? AND user_id = ?'
-  ).get(roomId, user.id) as any
-  
-  if (!member) {
-    return { success: false, error: '你不是该房间成员' }
-  }
-  
-  // 获取房间信息
+  // 获取房间信息（先查看房间是否存在）
   const room = db.prepare(`
     SELECT r.*, u.nickname as creator_name
     FROM rooms r
@@ -40,6 +31,11 @@ export default defineEventHandler(async (event) => {
     'SELECT * FROM npcs WHERE room_id = ?'
   ).all(roomId)
   
+  // 检查是否是房间成员
+  const member = db.prepare(
+    'SELECT * FROM room_members WHERE room_id = ? AND user_id = ?'
+  ).get(roomId, user.id) as any
+  
   // 获取成员列表
   const members = db.prepare(`
     SELECT rm.*, u.nickname, u.avatar
@@ -51,13 +47,17 @@ export default defineEventHandler(async (event) => {
   // 是否是创建者
   const isCreator = room.creator_id === user.id
   
+  // 是否是成员
+  const isMember = !!member
+  
   return {
     success: true,
     room,
     npcs,
     members,
     isCreator,
-    myMember: member
+    isMember,
+    myMember: member || null
   }
 })
 

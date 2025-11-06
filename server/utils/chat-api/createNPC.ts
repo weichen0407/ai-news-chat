@@ -36,10 +36,32 @@ export function createNPC(
       };
     }
 
-    // 插入NPC
-    const result = db.prepare(
-      'INSERT INTO npcs (room_id, name, avatar, profile) VALUES (?, ?, ?, ?)'
-    ).run(roomId, npc.name, npc.avatar || null, npc.profile);
+    // 插入NPC（包括所有游戏化属性）
+    const result = db.prepare(`
+      INSERT INTO npcs (
+        room_id, name, avatar, profile, persona,
+        personality, habits, skills, likes, dislikes,
+        age, occupation, background, goals, fears
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      roomId,
+      npc.name,
+      npc.avatar || null,
+      npc.profile || npc.personality || null,  // profile 作为后备
+      npc.personality || null,  // persona 使用 personality
+      npc.personality || null,
+      npc.habits || null,
+      npc.skills || null,
+      npc.likes || null,
+      npc.dislikes || null,
+      npc.age || null,
+      npc.occupation || null,
+      npc.background || null,
+      npc.goals || null,
+      npc.fears || null
+    );
+
+    console.log(`✅ 创建NPC成功: ${npc.name} (ID: ${result.lastInsertRowid})`)
 
     return {
       success: true,

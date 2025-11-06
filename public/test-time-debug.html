@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>时间调试工具</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .info-section {
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .info-section h2 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 1.3rem;
+    }
+    
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      background: white;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .info-label {
+      font-weight: 600;
+      color: #666;
+    }
+    
+    .info-value {
+      color: #333;
+      font-family: 'Courier New', monospace;
+      background: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    
+    .test-section {
+      background: #fff9e6;
+      border: 2px solid #ffeb3b;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #ff9800;
+      margin-bottom: 15px;
+    }
+    
+    .test-input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      margin-bottom: 10px;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .result {
+      background: white;
+      border: 2px solid #4caf50;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+    
+    .api-section {
+      background: #e3f2fd;
+      border: 2px solid #2196f3;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .api-section h2 {
+      color: #1976d2;
+      margin-bottom: 15px;
+    }
+    
+    .api-result {
+      background: white;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 10px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .room-item {
+      background: #f5f5f5;
+      border-left: 4px solid #2196f3;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    
+    .error {
+      color: #f44336;
+      font-weight: 600;
+    }
+    
+    .success {
+      color: #4caf50;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🕐 时间调试工具</h1>
+    
+    <!-- 系统信息 -->
+    <div class="info-section">
+      <h2>📊 系统信息</h2>
+      <div class="info-item">
+        <span class="info-label">当前浏览器时间：</span>
+        <span class="info-value" id="browserTime"></span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">时区偏移（分钟）：</span>
+        <span class="info-value" id="timezoneOffset"></span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">北京时间（UTC+8）：</span>
+        <span class="info-value" id="beijingTime"></span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">ISO时间字符串：</span>
+        <span class="info-value" id="isoTime"></span>
+      </div>
+    </div>
+    
+    <!-- 时间转换测试 -->
+    <div class="test-section">
+      <h2>🧪 时间转换测试</h2>
+      <input 
+        type="text" 
+        class="test-input" 
+        id="testTimeInput" 
+        placeholder="输入时间字符串（如：2024-01-15 14:30:00）"
+      />
+      <button class="btn" onclick="testTimeConversion()">转换为北京时间</button>
+      <div id="testResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <!-- API数据测试 -->
+    <div class="api-section">
+      <h2>🌐 API时间数据测试</h2>
+      <button class="btn" onclick="testAPIData()">获取我的群聊数据</button>
+      <div id="apiResult" class="api-result" style="display: none;"></div>
+    </div>
+  </div>
+  
+  <script>
+    // 更新系统信息
+    function updateSystemInfo() {
+      const now = new Date();
+      document.getElementById('browserTime').textContent = now.toString();
+      document.getElementById('timezoneOffset').textContent = now.getTimezoneOffset();
+      document.getElementById('beijingTime').textContent = getBeijingTime(now).toString();
+      document.getElementById('isoTime').textContent = now.toISOString();
+    }
+    
+    // 获取北京时间
+    function getBeijingTime(date) {
+      const d = date ? new Date(date) : new Date();
+      const utcTime = d.getTime();
+      const localOffset = d.getTimezoneOffset();
+      const beijingOffset = -480; // UTC+8
+      return new Date(utcTime + (localOffset + beijingOffset) * 60 * 1000);
+    }
+    
+    // 格式化相对时间
+    function formatRelativeTime(dateStr) {
+      const now = getBeijingTime();
+      const target = getBeijingTime(new Date(dateStr));
+      const diff = now.getTime() - target.getTime();
+      
+      const seconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      
+      console.log('时间差计算:', {
+        now: now.toString(),
+        target: target.toString(),
+        diff: diff,
+        seconds,
+        minutes,
+        hours,
+        days
+      });
+      
+      if (seconds < 60) {
+        return '刚刚';
+      } else if (minutes < 60) {
+        return `${minutes}分钟前`;
+      } else if (hours < 24) {
+        return `${hours}小时前`;
+      } else if (days === 1) {
+        return '昨天';
+      } else if (days < 7) {
+        return `${days}天前`;
+      } else {
+        const year = target.getFullYear();
+        const month = String(target.getMonth() + 1).padStart(2, '0');
+        const day = String(target.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    }
+    
+    // 测试时间转换
+    function testTimeConversion() {
+      const input = document.getElementById('testTimeInput').value;
+      const resultDiv = document.getElementById('testResult');
+      
+      if (!input) {
+        alert('请输入时间字符串');
+        return;
+      }
+      
+      try {
+        const date = new Date(input);
+        const beijingDate = getBeijingTime(date);
+        const relativeTime = formatRelativeTime(input);
+        
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+          <div class="success">✅ 转换成功</div>
+          <div style="margin-top: 10px;">
+            <strong>原始输入：</strong> ${input}<br/>
+            <strong>解析后：</strong> ${date.toString()}<br/>
+            <strong>北京时间：</strong> ${beijingDate.toString()}<br/>
+            <strong>相对时间：</strong> ${relativeTime}
+          </div>
+        `;
+      } catch (error) {
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+          <div class="error">❌ 转换失败</div>
+          <div style="margin-top: 10px;">
+            <strong>错误：</strong> ${error.message}
+          </div>
+        `;
+      }
+    }
+    
+    // 测试API数据
+    async function testAPIData() {
+      const resultDiv = document.getElementById('apiResult');
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<div>加载中...</div>';
+      
+      try {
+        const response = await fetch('/api/rooms/my-rooms');
+        const data = await response.json();
+        
+        if (!data.success) {
+          resultDiv.innerHTML = `<div class="error">❌ 获取失败: ${data.error}</div>`;
+          return;
+        }
+        
+        let html = `<div class="success">✅ 获取成功，共 ${data.rooms.length} 个群聊</div>`;
+        
+        data.rooms.forEach((room, index) => {
+          const relativeTime = room.last_message_time ? formatRelativeTime(room.last_message_time) : '无';
+          
+          html += `
+            <div class="room-item">
+              <strong>${index + 1}. ${room.name}</strong><br/>
+              <small>
+                <strong>最后消息：</strong> ${room.last_message || '暂无消息'}<br/>
+                <strong>原始时间：</strong> ${room.last_message_time || '无'}<br/>
+                <strong>相对时间：</strong> ${relativeTime}<br/>
+                <strong>未读数：</strong> ${room.unread_count || 0}
+              </small>
+            </div>
+          `;
+        });
+        
+        resultDiv.innerHTML = html;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+      }
+    }
+    
+    // 初始化
+    updateSystemInfo();
+    setInterval(updateSystemInfo, 1000);
+  </script>
+</body>
+</html>
+

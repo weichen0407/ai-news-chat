@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>测试AI解析功能</title>
+  <style>
+    body {
+      font-family: -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .success { color: #10b981; }
+    .error { color: #ef4444; }
+    .info { color: #3b82f6; }
+    .test-section {
+      background: #f5f5f5;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    #result {
+      margin-top: 20px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 AI智能解析功能测试</h1>
+  
+  <div class="test-section">
+    <h2>第一步：检查文件是否存在</h2>
+    <button onclick="checkFiles()">检查文件</button>
+    <div id="fileCheck"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>第二步：测试API端点</h2>
+    <button onclick="testAPI()">测试API</button>
+    <div id="apiTest"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>第三步：打开Creator页面</h2>
+    <p>点击下面的按钮，会在新窗口打开Creator页面</p>
+    <button onclick="window.open('/creator', '_blank')">打开Creator</button>
+    <p class="info">
+      在新窗口中：<br>
+      1. 点击左侧「➕ 新建剧情」<br>
+      2. 查看是否有「🤖 AI智能解析」区域<br>
+      3. 如果看不到，按 Ctrl+Shift+R 强制刷新
+    </p>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    async function checkFiles() {
+      const output = document.getElementById('fileCheck');
+      output.innerHTML = '<p class="info">检查中...</p>';
+      
+      const files = [
+        '/creator/app.js',
+        '/creator/index.html',
+        '/creator/style.css'
+      ];
+      
+      let html = '<h3>文件检查结果：</h3><ul>';
+      
+      for (const file of files) {
+        try {
+          const response = await fetch(file, { method: 'HEAD' });
+          if (response.ok) {
+            html += `<li class="success">✅ ${file} 存在</li>`;
+          } else {
+            html += `<li class="error">❌ ${file} 不存在 (${response.status})</li>`;
+          }
+        } catch (error) {
+          html += `<li class="error">❌ ${file} 检查失败: ${error.message}</li>`;
+        }
+      }
+      
+      html += '</ul>';
+      output.innerHTML = html;
+    }
+
+    async function testAPI() {
+      const output = document.getElementById('apiTest');
+      output.innerHTML = '<p class="info">测试中...</p>';
+      
+      try {
+        const response = await fetch('/api/creator/ai-parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: '这是一个测试文本，用于验证AI解析API是否正常工作。'
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          output.innerHTML = `
+            <h3 class="success">✅ API测试成功！</h3>
+            <p>剧情名称: ${result.story.name}</p>
+            <p>识别的角色数量: ${result.npcs?.length || 0}</p>
+            <p class="info">AI智能解析功能正常工作！</p>
+          `;
+        } else {
+          output.innerHTML = `
+            <h3 class="error">❌ API测试失败</h3>
+            <p>错误: ${result.error || '未知错误'}</p>
+            <p class="info">请检查服务器日志</p>
+          `;
+        }
+      } catch (error) {
+        output.innerHTML = `
+          <h3 class="error">❌ API请求失败</h3>
+          <p>错误: ${error.message}</p>
+          <p class="info">可能是网络问题或服务未启动</p>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
+

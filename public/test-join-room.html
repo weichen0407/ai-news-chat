@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>房间加入测试</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .btn {
+      background: #07c160;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    .btn:hover {
+      background: #06ad56;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f8f8;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .success { color: #07c160; }
+    .error { color: #ff4757; }
+    .warning { color: #ffa502; }
+    .room-card {
+      border: 1px solid #e0e0e0;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .room-card:hover {
+      border-color: #07c160;
+      box-shadow: 0 2px 8px rgba(7, 193, 96, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 房间加入功能测试</h1>
+  
+  <div class="test-section">
+    <h2>1️⃣ 检查登录状态</h2>
+    <button class="btn" onclick="checkLogin()">检查登录</button>
+    <div id="loginResult" class="result">点击按钮开始检查...</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2️⃣ 加载预设房间</h2>
+    <button class="btn" onclick="loadRooms()">加载房间列表</button>
+    <div id="roomsResult" class="result">点击按钮加载...</div>
+    <div id="roomsList"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3️⃣ 测试加入房间</h2>
+    <p>选择一个房间ID测试：</p>
+    <button class="btn" onclick="testJoinRoom('PRESET_WBQ')">加入王宝强房间</button>
+    <button class="btn" onclick="testJoinRoom('PRESET_TRUMP')">加入特朗普房间</button>
+    <button class="btn" onclick="testJoinRoom('PRESET_CRYPTO')">加入加密货币房间</button>
+    <div id="joinResult" class="result">选择房间后显示结果...</div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    async function checkLogin() {
+      const result = document.getElementById('loginResult');
+      result.innerHTML = '⏳ 正在检查...';
+      
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        
+        if (data.success && data.user) {
+          currentUser = data.user;
+          result.innerHTML = `<span class="success">✅ 已登录</span>\n\n用户：${data.user.nickname} (@${data.user.username})\nID: ${data.user.id}`;
+        } else {
+          result.innerHTML = `<span class="error">❌ 未登录</span>\n\n请访问 <a href="/login">登录页面</a>`;
+        }
+      } catch (error) {
+        result.innerHTML = `<span class="error">❌ 请求失败</span>\n\n${error.message}`;
+      }
+    }
+    
+    async function loadRooms() {
+      const result = document.getElementById('roomsResult');
+      const listDiv = document.getElementById('roomsList');
+      result.innerHTML = '⏳ 正在加载...';
+      listDiv.innerHTML = '';
+      
+      try {
+        const response = await fetch('/api/rooms/preset-rooms');
+        const data = await response.json();
+        
+        if (data.success) {
+          result.innerHTML = `<span class="success">✅ 加载成功</span>\n\n找到 ${data.rooms.length} 个预设房间`;
+          
+          data.rooms.forEach(room => {
+            const card = document.createElement('div');
+            card.className = 'room-card';
+            card.innerHTML = `
+              <strong>${room.avatar} ${room.name}</strong><br>
+              <small>${room.description}</small><br>
+              <small>ID: ${room.id} | 成员: ${room.players}</small>
+            `;
+            card.onclick = () => testJoinRoom(room.id);
+            listDiv.appendChild(card);
+          });
+        } else {
+          result.innerHTML = `<span class="error">❌ 加载失败</span>\n\n${JSON.stringify(data, null, 2)}`;
+        }
+      } catch (error) {
+        result.innerHTML = `<span class="error">❌ 请求失败</span>\n\n${error.message}`;
+      }
+    }
+    
+    async function testJoinRoom(roomId) {
+      const result = document.getElementById('joinResult');
+      result.innerHTML = `⏳ 正在测试加入房间 ${roomId}...`;
+      
+      try {
+        // 1. 检查房间是否存在
+        result.innerHTML += '\n\n📋 步骤1: 检查房间信息...';
+        const roomResponse = await fetch(`/api/rooms/${roomId}/info`);
+        const roomData = await roomResponse.json();
+        
+        if (roomData.success) {
+          result.innerHTML += '\n<span class="success">✅ 房间存在</span>';
+          result.innerHTML += '\n房间名称: ' + roomData.room.name;
+          result.innerHTML += '\nNPC数量: ' + roomData.npcs.length;
+        } else {
+          result.innerHTML += '\n<span class="error">❌ 房间不存在</span>';
+          return;
+        }
+        
+        // 2. 测试页面路由
+        result.innerHTML += '\n\n📋 步骤2: 测试页面访问...';
+        const pageUrl = `/room/${roomId}`;
+        result.innerHTML += `\n页面URL: <a href="${pageUrl}" target="_blank">${pageUrl}</a>`;
+        result.innerHTML += '\n<span class="success">✅ 可以点击上面的链接测试</span>';
+        
+        // 3. 显示模拟跳转
+        result.innerHTML += '\n\n📋 步骤3: 模拟跳转...';
+        result.innerHTML += `\n<button class="btn" onclick="window.location.href='${pageUrl}'">🚀 跳转到房间</button>`;
+        
+        result.innerHTML += '\n\n<span class="success">✅ 测试完成！</span>';
+        result.innerHTML += '\n\n💡 提示：';
+        result.innerHTML += '\n  1. 如果点击按钮没反应，可能是路由问题';
+        result.innerHTML += '\n  2. 如果跳转后显示空白，检查Console错误';
+        result.innerHTML += '\n  3. 如果显示404，房间页面可能不存在';
+        
+      } catch (error) {
+        result.innerHTML += `\n\n<span class="error">❌ 测试失败</span>\n${error.message}`;
+      }
+    }
+    
+    // 页面加载时自动检查登录
+    window.onload = () => {
+      checkLogin();
+    };
+  </script>
+</body>
+</html>
+

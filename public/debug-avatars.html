@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>头像诊断工具</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .section h2 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 0.5rem;
+    }
+    
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    button:hover {
+      background: #5568d3;
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .result {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .avatar-test {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      background: white;
+    }
+    
+    .avatar-preview {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    
+    .avatar-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .avatar-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .avatar-name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    
+    .avatar-type {
+      font-size: 0.875rem;
+      color: #666;
+      word-break: break-all;
+    }
+    
+    .status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .status.warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #667eea;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔍 头像诊断工具</h1>
+    <p>检查各个页面的头像显示问题</p>
+  </div>
+
+  <div class="section">
+    <h2>📊 1. 登录状态检查</h2>
+    <button onclick="checkLogin()">检查登录状态</button>
+    <div id="loginResult" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="section">
+    <h2>👥 2. 联系人头像检查</h2>
+    <button onclick="checkContacts()">检查联系人API</button>
+    <div id="contactsResult" class="result" style="display:none;"></div>
+    <div id="contactsAvatars"></div>
+  </div>
+
+  <div class="section">
+    <h2>🎭 3. 朋友圈头像检查</h2>
+    <button onclick="checkMoments()">检查朋友圈API</button>
+    <div id="momentsResult" class="result" style="display:none;"></div>
+    <div id="momentsAvatars"></div>
+  </div>
+
+  <div class="section">
+    <h2>💬 4. 聊天消息头像检查</h2>
+    <input type="text" id="roomId" placeholder="输入房间ID（如 PRESET_WBQ）" style="padding: 0.5rem; margin-right: 0.5rem; width: 300px;">
+    <button onclick="checkMessages()">检查聊天API</button>
+    <div id="messagesResult" class="result" style="display:none;"></div>
+    <div id="messagesAvatars"></div>
+  </div>
+
+  <div class="section">
+    <h2>🧪 5. 头像URL测试</h2>
+    <input type="text" id="testUrl" placeholder="输入头像URL或base64" style="padding: 0.5rem; margin-right: 0.5rem; width: 500px;">
+    <button onclick="testAvatarUrl()">测试</button>
+    <div id="testResult"></div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    // 辅助函数：判断是否为图片URL
+    function isImageAvatar(avatar) {
+      if (!avatar) return false;
+      return avatar.startsWith('data:image') || 
+             avatar.startsWith('http://') || 
+             avatar.startsWith('https://');
+    }
+
+    // 辅助函数：渲染头像
+    function renderAvatar(avatar, name) {
+      const div = document.createElement('div');
+      div.className = 'avatar-test';
+      
+      const preview = document.createElement('div');
+      preview.className = 'avatar-preview';
+      
+      if (isImageAvatar(avatar)) {
+        const img = document.createElement('img');
+        img.src = avatar;
+        img.alt = name;
+        img.onerror = function() {
+          preview.innerHTML = '❌';
+          preview.style.background = '#ffebee';
+        };
+        img.onload = function() {
+          const status = document.getElementById(`status-${name}`);
+          if (status) status.className = 'status success';
+          if (status) status.textContent = '✅ 加载成功';
+        };
+        preview.appendChild(img);
+      } else {
+        preview.textContent = avatar || '👤';
+      }
+      
+      const info = document.createElement('div');
+      info.className = 'avatar-info';
+      info.innerHTML = `
+        <div class="avatar-name">${name}</div>
+        <div class="avatar-type">${avatar ? (isImageAvatar(avatar) ? `图片: ${avatar.substring(0, 60)}...` : `Emoji: ${avatar}`) : '空头像'}</div>
+      `;
+      
+      const status = document.createElement('span');
+      status.id = `status-${name}`;
+      status.className = isImageAvatar(avatar) ? 'status warning' : 'status success';
+      status.textContent = isImageAvatar(avatar) ? '⏳ 加载中...' : '✅ 直接显示';
+      
+      div.appendChild(preview);
+      div.appendChild(info);
+      div.appendChild(status);
+      
+      return div;
+    }
+
+    // 1. 检查登录状态
+    async function checkLogin() {
+      const resultDiv = document.getElementById('loginResult');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = '⏳ 检查中...';
+      
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        
+        if (data.success && data.user) {
+          currentUser = data.user;
+          resultDiv.textContent = `✅ 已登录\n用户ID: ${data.user.id}\n用户名: ${data.user.username}\n昵称: ${data.user.nickname}\n头像: ${data.user.avatar ? data.user.avatar.substring(0, 60) + '...' : '无'}`;
+        } else {
+          resultDiv.textContent = '❌ 未登录或会话已过期';
+        }
+      } catch (error) {
+        resultDiv.textContent = `❌ 错误: ${error.message}`;
+      }
+    }
+
+    // 2. 检查联系人
+    async function checkContacts() {
+      const resultDiv = document.getElementById('contactsResult');
+      const avatarsDiv = document.getElementById('contactsAvatars');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = '⏳ 检查中...';
+      avatarsDiv.innerHTML = '';
+      
+      try {
+        const response = await fetch('/api/contacts/list');
+        const data = await response.json();
+        
+        if (data.success) {
+          resultDiv.textContent = `✅ 成功获取 ${data.contacts.length} 个联系人`;
+          
+          data.contacts.forEach(contact => {
+            avatarsDiv.appendChild(renderAvatar(contact.avatar, contact.name));
+          });
+        } else {
+          resultDiv.textContent = `❌ 失败: ${data.error}`;
+        }
+      } catch (error) {
+        resultDiv.textContent = `❌ 错误: ${error.message}`;
+      }
+    }
+
+    // 3. 检查朋友圈
+    async function checkMoments() {
+      const resultDiv = document.getElementById('momentsResult');
+      const avatarsDiv = document.getElementById('momentsAvatars');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = '⏳ 检查中...';
+      avatarsDiv.innerHTML = '';
+      
+      try {
+        const response = await fetch('/api/moments/friends');
+        const data = await response.json();
+        
+        if (data.success) {
+          resultDiv.textContent = `✅ 成功获取 ${data.moments.length} 条朋友圈`;
+          
+          data.moments.forEach(moment => {
+            const avatar = moment.user_avatar || moment.npc_avatar;
+            const name = moment.user_nickname || moment.npc_name;
+            avatarsDiv.appendChild(renderAvatar(avatar, name));
+          });
+        } else {
+          resultDiv.textContent = `❌ 失败: ${data.error}`;
+        }
+      } catch (error) {
+        resultDiv.textContent = `❌ 错误: ${error.message}`;
+      }
+    }
+
+    // 4. 检查聊天消息
+    async function checkMessages() {
+      const roomId = document.getElementById('roomId').value;
+      if (!roomId) {
+        alert('请输入房间ID');
+        return;
+      }
+      
+      const resultDiv = document.getElementById('messagesResult');
+      const avatarsDiv = document.getElementById('messagesAvatars');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = '⏳ 检查中...';
+      avatarsDiv.innerHTML = '';
+      
+      try {
+        const response = await fetch(`/api/rooms/${roomId}/messages`);
+        const data = await response.json();
+        
+        if (data.success) {
+          resultDiv.textContent = `✅ 成功获取 ${data.messages.length} 条消息`;
+          
+          // 去重头像
+          const seen = new Set();
+          data.messages.forEach(msg => {
+            const key = `${msg.sender_name}-${msg.avatar}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              avatarsDiv.appendChild(renderAvatar(msg.avatar, msg.sender_name));
+            }
+          });
+        } else {
+          resultDiv.textContent = `❌ 失败: ${data.error}`;
+        }
+      } catch (error) {
+        resultDiv.textContent = `❌ 错误: ${error.message}`;
+      }
+    }
+
+    // 5. 测试头像URL
+    function testAvatarUrl() {
+      const url = document.getElementById('testUrl').value;
+      const resultDiv = document.getElementById('testResult');
+      
+      if (!url) {
+        alert('请输入头像URL');
+        return;
+      }
+      
+      resultDiv.innerHTML = '';
+      resultDiv.appendChild(renderAvatar(url, '测试头像'));
+    }
+
+    // 页面加载时自动检查登录
+    window.addEventListener('load', () => {
+      checkLogin();
+    });
+  </script>
+</body>
+</html>
+

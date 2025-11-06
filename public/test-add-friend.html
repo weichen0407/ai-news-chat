@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>测试添加好友功能</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #333;
+      margin-top: 0;
+    }
+    button {
+      background: #07c160;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background: #06ad56;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      border-left: 4px solid #667eea;
+    }
+    .success {
+      border-left-color: #07c160;
+    }
+    .error {
+      border-left-color: #ff4444;
+    }
+    pre {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    input {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 200px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 测试添加好友功能</h1>
+
+  <div class="test-card">
+    <h2>📊 获取当前用户信息</h2>
+    <button onclick="getCurrentUser()">🔍 查看当前用户</button>
+    <div id="userResult" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>👥 测试添加好友API</h2>
+    <p>输入要添加的好友ID：</p>
+    <input type="number" id="friendId" placeholder="好友ID (如: 2)" value="2">
+    <button onclick="testAddFriend()">➕ 添加好友</button>
+    <div id="addResult" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>📋 查看好友列表</h2>
+    <button onclick="getFriendsList()">📜 我的好友</button>
+    <div id="friendsResult" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>🏠 查看房间成员</h2>
+    <p>输入房间ID：</p>
+    <input type="text" id="roomId" placeholder="房间ID" value="1">
+    <button onclick="getRoomPlayers()">👥 查看成员</button>
+    <div id="playersResult" class="result" style="display:none;"></div>
+  </div>
+
+  <script>
+    let currentUserId = null;
+
+    async function getCurrentUser() {
+      const resultDiv = document.getElementById('userResult');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = '加载中...';
+
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+
+        console.log('用户信息:', data);
+
+        if (data.user) {
+          currentUserId = data.user.id;
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML = `
+            <h3>✅ 当前用户</h3>
+            <pre>${JSON.stringify(data.user, null, 2)}</pre>
+          `;
+        } else {
+          throw new Error('未登录或会话已过期');
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = `
+          <h3>❌ 错误</h3>
+          <p>${error.message}</p>
+          <p>请先登录: <a href="/login">点击登录</a></p>
+        `;
+      }
+    }
+
+    async function testAddFriend() {
+      if (!currentUserId) {
+        alert('请先获取当前用户信息');
+        return;
+      }
+
+      const friendId = document.getElementById('friendId').value;
+      const resultDiv = document.getElementById('addResult');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = '处理中...';
+
+      try {
+        console.log('发送请求: /api/friends/add');
+        console.log('参数:', { friend_id: parseInt(friendId) });
+
+        const response = await fetch('/api/friends/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            friend_id: parseInt(friendId)
+          })
+        });
+
+        console.log('响应状态:', response.status);
+        
+        const data = await response.json();
+        console.log('响应数据:', data);
+
+        if (data.success) {
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML = `
+            <h3>✅ 添加成功</h3>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.innerHTML = `
+            <h3>❌ 添加失败</h3>
+            <p>${data.error || '未知错误'}</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = `
+          <h3>❌ 请求错误</h3>
+          <p>${error.message}</p>
+        `;
+      }
+    }
+
+    async function getFriendsList() {
+      const resultDiv = document.getElementById('friendsResult');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = '加载中...';
+
+      try {
+        const response = await fetch('/api/friends/list');
+        const data = await response.json();
+
+        console.log('好友列表:', data);
+
+        if (data.success) {
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML = `
+            <h3>✅ 好友列表 (${data.friends.length}人)</h3>
+            <pre>${JSON.stringify(data.friends, null, 2)}</pre>
+          `;
+        } else {
+          throw new Error(data.error || '获取失败');
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = `
+          <h3>❌ 错误</h3>
+          <p>${error.message}</p>
+        `;
+      }
+    }
+
+    async function getRoomPlayers() {
+      if (!currentUserId) {
+        alert('请先获取当前用户信息');
+        return;
+      }
+
+      const roomId = document.getElementById('roomId').value;
+      const resultDiv = document.getElementById('playersResult');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = '加载中...';
+
+      try {
+        const response = await fetch(`/api/friends/room-players?roomId=${roomId}&currentUserId=${currentUserId}`);
+        const data = await response.json();
+
+        console.log('房间玩家:', data);
+
+        if (data.success) {
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML = `
+            <h3>✅ 房间成员 (${data.players.length}人)</h3>
+            <pre>${JSON.stringify(data.players, null, 2)}</pre>
+          `;
+        } else {
+          throw new Error(data.error || '获取失败');
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = `
+          <h3>❌ 错误</h3>
+          <p>${error.message}</p>
+        `;
+      }
+    }
+
+    // 页面加载时自动获取用户信息
+    window.onload = () => {
+      getCurrentUser();
+    };
+  </script>
+</body>
+</html>
+

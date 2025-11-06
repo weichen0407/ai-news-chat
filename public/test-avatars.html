@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>头像测试</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 1000px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .avatar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .avatar-item {
+      text-align: center;
+    }
+    .avatar-display {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin: 0 auto 10px;
+      overflow: hidden;
+      border: 2px solid #ddd;
+    }
+    .avatar-display img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .avatar-display.error {
+      border-color: red;
+      background: #ffe0e0;
+    }
+    .avatar-display.success {
+      border-color: green;
+    }
+    .avatar-info {
+      font-size: 0.85rem;
+      color: #666;
+      word-break: break-all;
+    }
+    .btn {
+      background: #07c160;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #06ad56;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🖼️ 头像显示测试</h1>
+  
+  <div class="test-section">
+    <h2>1️⃣ 测试不同类型的头像</h2>
+    <button class="btn" onclick="testAvatars()">开始测试</button>
+    <div id="avatarGrid" class="avatar-grid"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2️⃣ 测试用户头像</h2>
+    <button class="btn" onclick="testUserAvatars()">加载用户头像</button>
+    <div id="userGrid" class="avatar-grid"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3️⃣ 测试NPC头像</h2>
+    <button class="btn" onclick="testNPCAvatars()">加载NPC头像</button>
+    <div id="npcGrid" class="avatar-grid"></div>
+  </div>
+
+  <script>
+    function isImageAvatar(avatar) {
+      if (!avatar) return false;
+      return avatar.startsWith('http') || avatar.startsWith('data:image') || avatar.startsWith('/');
+    }
+    
+    function createAvatarElement(name, avatar, type) {
+      const div = document.createElement('div');
+      div.className = 'avatar-item';
+      
+      const avatarDiv = document.createElement('div');
+      avatarDiv.className = 'avatar-display';
+      
+      if (isImageAvatar(avatar)) {
+        const img = document.createElement('img');
+        img.src = avatar;
+        img.alt = name;
+        img.onload = () => {
+          avatarDiv.classList.add('success');
+        };
+        img.onerror = () => {
+          avatarDiv.classList.add('error');
+          avatarDiv.innerHTML = '<span>❌</span>';
+        };
+        avatarDiv.appendChild(img);
+      } else {
+        avatarDiv.textContent = avatar || '👤';
+        avatarDiv.classList.add('success');
+      }
+      
+      const info = document.createElement('div');
+      info.className = 'avatar-info';
+      info.innerHTML = `<strong>${name}</strong><br>类型: ${type}<br>值: ${avatar ? avatar.substring(0, 30) + '...' : '无'}`;
+      
+      div.appendChild(avatarDiv);
+      div.appendChild(info);
+      return div;
+    }
+    
+    function testAvatars() {
+      const grid = document.getElementById('avatarGrid');
+      grid.innerHTML = '';
+      
+      const testCases = [
+        { name: 'Emoji', avatar: '🎭', type: 'emoji' },
+        { name: 'Text', avatar: '👤', type: 'text' },
+        { name: 'Base64', avatar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', type: 'base64' },
+        { name: '百度图片', avatar: 'https://img2.baidu.com/it/u=3602773692,1512483864&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=667', type: 'http' },
+        { name: '空值', avatar: '', type: 'empty' },
+        { name: 'Null', avatar: null, type: 'null' }
+      ];
+      
+      testCases.forEach(test => {
+        grid.appendChild(createAvatarElement(test.name, test.avatar, test.type));
+      });
+    }
+    
+    async function testUserAvatars() {
+      const grid = document.getElementById('userGrid');
+      grid.innerHTML = '<p>加载中...</p>';
+      
+      try {
+        // 模拟加载用户数据（实际应该调用API）
+        const users = [
+          { name: 'Jerry', avatar: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZg...' },
+          { name: 'Test User', avatar: '👤' },
+        ];
+        
+        grid.innerHTML = '';
+        users.forEach(user => {
+          grid.appendChild(createAvatarElement(user.name, user.avatar, 'user'));
+        });
+      } catch (error) {
+        grid.innerHTML = `<p style="color: red;">加载失败: ${error.message}</p>`;
+      }
+    }
+    
+    async function testNPCAvatars() {
+      const grid = document.getElementById('npcGrid');
+      grid.innerHTML = '<p>加载中...</p>';
+      
+      try {
+        const npcs = [
+          { name: '王宝强', avatar: 'https://img2.baidu.com/it/u=3602773692,1512483864&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=667' },
+          { name: '马蓉', avatar: 'https://img1.baidu.com/it/u=3857294744,1463384807&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=750' },
+          { name: '宋喆', avatar: 'https://img2.baidu.com/it/u=2547991236,4045465124&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=666' },
+          { name: '特朗普', avatar: '🦁' },
+          { name: '拜登', avatar: '🦅' },
+          { name: 'SBF', avatar: '👨‍💼' },
+          { name: '马斯克', avatar: '🚀' },
+          { name: '赵长鹏', avatar: '🐉' }
+        ];
+        
+        grid.innerHTML = '';
+        npcs.forEach(npc => {
+          grid.appendChild(createAvatarElement(npc.name, npc.avatar, 'npc'));
+        });
+      } catch (error) {
+        grid.innerHTML = `<p style="color: red;">加载失败: ${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
+

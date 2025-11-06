@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>朋友圈时间测试</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      max-width: 900px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #07c160;
+      padding-bottom: 10px;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .label {
+      font-weight: bold;
+      color: #666;
+    }
+    .value {
+      color: #333;
+      font-family: monospace;
+    }
+    button {
+      background: #07c160;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #06ad56;
+    }
+    .moment-item {
+      background: #f9f9f9;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border-left: 4px solid #07c160;
+    }
+    .moment-author {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    .moment-content {
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .moment-time {
+      color: #999;
+      font-size: 14px;
+    }
+    .moment-raw-time {
+      color: #666;
+      font-size: 12px;
+      font-family: monospace;
+      margin-top: 4px;
+      padding: 4px 8px;
+      background: #fff;
+      border-radius: 4px;
+    }
+    .error {
+      color: red;
+      padding: 10px;
+      background: #fee;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .success {
+      color: green;
+      padding: 10px;
+      background: #efe;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🕐 朋友圈时间转换测试</h1>
+
+  <div class="section">
+    <h2>📊 系统信息</h2>
+    <div class="info-row">
+      <span class="label">浏览器本地时间：</span>
+      <span class="value" id="localTime"></span>
+    </div>
+    <div class="info-row">
+      <span class="label">浏览器时区偏移：</span>
+      <span class="value" id="timezoneOffset"></span>
+    </div>
+    <div class="info-row">
+      <span class="label">当前北京时间（计算）：</span>
+      <span class="value" id="beijingTime"></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🧪 SQLite 时间格式测试</h2>
+    <div id="sqliteTest"></div>
+  </div>
+
+  <div class="section">
+    <h2>📝 获取最新朋友圈</h2>
+    <button onclick="fetchMoments()">获取朋友圈数据</button>
+    <div id="momentsResult"></div>
+  </div>
+
+  <script>
+    // 更新系统信息
+    function updateSystemInfo() {
+      const now = new Date()
+      document.getElementById('localTime').textContent = now.toLocaleString('zh-CN')
+      document.getElementById('timezoneOffset').textContent = `UTC${now.getTimezoneOffset() > 0 ? '-' : '+'}${Math.abs(now.getTimezoneOffset() / 60)}`
+      
+      // 计算北京时间
+      const beijingTime = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+      document.getElementById('beijingTime').textContent = beijingTime.toISOString().replace('T', ' ').substring(0, 19)
+    }
+
+    // 测试 SQLite 时间格式转换
+    function testSQLiteFormat() {
+      const testCases = [
+        { 
+          input: '2025-11-05 09:28:32', 
+          desc: 'SQLite CURRENT_TIMESTAMP 格式 (假设为 UTC)'
+        },
+        { 
+          input: new Date().toISOString().substring(0, 19).replace('T', ' '), 
+          desc: '当前 UTC 时间 (SQLite 格式)'
+        }
+      ]
+
+      let html = ''
+      testCases.forEach((test, index) => {
+        // 方法1：直接 new Date（错误，会当成本地时间）
+        const wrong = new Date(test.input)
+        
+        // 方法2：添加 Z 标记为 UTC（正确）
+        const correct = new Date(test.input.replace(' ', 'T') + 'Z')
+        
+        // 转换为北京时间
+        const beijingTime = new Date(correct.getTime() + 8 * 60 * 60 * 1000)
+        
+        // 计算相对时间
+        const now = new Date(Date.now() + 8 * 60 * 60 * 1000)
+        const diff = now.getTime() - beijingTime.getTime()
+        const minutes = Math.floor(diff / 60000)
+        const hours = Math.floor(minutes / 60)
+        const days = Math.floor(hours / 24)
+        
+        let relativeTime = '未知'
+        if (minutes < 1) relativeTime = '刚刚'
+        else if (minutes < 60) relativeTime = `${minutes}分钟前`
+        else if (hours < 24) relativeTime = `${hours}小时前`
+        else if (days < 7) relativeTime = `${days}天前`
+        else relativeTime = beijingTime.toISOString().substring(0, 10)
+
+        html += `
+          <div class="moment-item">
+            <div class="moment-author">测试案例 ${index + 1}: ${test.desc}</div>
+            <div class="moment-raw-time">原始: ${test.input}</div>
+            <div class="moment-raw-time">❌ 错误解析 (new Date): ${wrong.toLocaleString('zh-CN')}</div>
+            <div class="moment-raw-time">✅ 正确解析 (UTC): ${correct.toISOString()}</div>
+            <div class="moment-raw-time">✅ 北京时间: ${beijingTime.toISOString().replace('T', ' ').substring(0, 19)}</div>
+            <div class="moment-time">显示: ${relativeTime}</div>
+          </div>
+        `
+      })
+
+      document.getElementById('sqliteTest').innerHTML = html
+    }
+
+    // 获取朋友圈数据
+    async function fetchMoments() {
+      const resultDiv = document.getElementById('momentsResult')
+      resultDiv.innerHTML = '<p>加载中...</p>'
+
+      try {
+        const response = await fetch('/api/moments/recent')
+        const data = await response.json()
+
+        if (!data.success) {
+          resultDiv.innerHTML = `<div class="error">❌ 获取失败: ${data.error || '未知错误'}</div>`
+          return
+        }
+
+        if (!data.moments || data.moments.length === 0) {
+          resultDiv.innerHTML = '<div class="success">✅ 数据获取成功，但没有朋友圈</div>'
+          return
+        }
+
+        let html = `<div class="success">✅ 获取到 ${data.moments.length} 条朋友圈</div>`
+
+        data.moments.forEach((moment, index) => {
+          // 解析时间
+          let created_at = moment.created_at
+          let targetUtc
+          
+          if (typeof created_at === 'string') {
+            if (created_at.includes(' ') && !created_at.includes('T') && !created_at.includes('Z')) {
+              targetUtc = new Date(created_at.replace(' ', 'T') + 'Z')
+            } else {
+              targetUtc = new Date(created_at)
+            }
+          } else {
+            targetUtc = new Date(created_at)
+          }
+
+          const beijingTime = new Date(targetUtc.getTime() + 8 * 60 * 60 * 1000)
+          const now = new Date(Date.now() + 8 * 60 * 60 * 1000)
+          const diff = now.getTime() - beijingTime.getTime()
+          
+          const minutes = Math.floor(diff / 60000)
+          const hours = Math.floor(minutes / 60)
+          const days = Math.floor(hours / 24)
+          
+          let relativeTime = '未知'
+          if (diff < 0) relativeTime = '刚刚'
+          else if (minutes < 1) relativeTime = '刚刚'
+          else if (minutes < 60) relativeTime = `${minutes}分钟前`
+          else if (hours < 24) relativeTime = `${hours}小时前`
+          else if (days === 1) relativeTime = '昨天'
+          else if (days < 7) relativeTime = `${days}天前`
+          else relativeTime = beijingTime.toISOString().substring(0, 10)
+
+          const author = moment.npc_name || moment.user_nickname || moment.user_name || '未知'
+
+          html += `
+            <div class="moment-item">
+              <div class="moment-author">${index + 1}. ${author}</div>
+              <div class="moment-content">${moment.content}</div>
+              <div class="moment-raw-time">数据库原始时间: ${created_at}</div>
+              <div class="moment-raw-time">解析为UTC: ${targetUtc.toISOString()}</div>
+              <div class="moment-raw-time">转换为北京时间: ${beijingTime.toISOString().replace('T', ' ').substring(0, 19)}</div>
+              <div class="moment-raw-time">时间差: ${Math.floor(diff / 1000)}秒 = ${minutes}分钟 = ${hours}小时 = ${days}天</div>
+              <div class="moment-time">前端显示: ${relativeTime}</div>
+            </div>
+          `
+        })
+
+        resultDiv.innerHTML = html
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`
+      }
+    }
+
+    // 初始化
+    updateSystemInfo()
+    testSQLiteFormat()
+    setInterval(updateSystemInfo, 1000)
+
+    console.log('✅ 测试页面已加载')
+    console.log('💡 点击按钮获取朋友圈数据进行测试')
+  </script>
+</body>
+</html>
+

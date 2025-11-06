@@ -13,7 +13,8 @@ export function generateRoomId(): string {
  * 验证NPC数据
  */
 export function validateNPC(npc: any): boolean {
-  return !!(npc && npc.name && npc.profile);
+  // 需要name，以及profile或personality其中之一
+  return !!(npc && npc.name && (npc.profile || npc.personality));
 }
 
 /**
