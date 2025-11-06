@@ -29,7 +29,7 @@ function createTables(db) {
       event_background TEXT DEFAULT '',
       dialogue_density INTEGER DEFAULT 2,
       avatar TEXT DEFAULT '聊',
-      created_by INTEGER NOT NULL,
+      creator_id INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       preset_id TEXT,
       auto_mode INTEGER DEFAULT 0
@@ -205,7 +205,7 @@ export function importInitialData(db) {
       // 2. 导入房间
       if (initialData.data.rooms?.length > 0) {
         const insertRoom = db.prepare(`
-          INSERT INTO rooms (id, name, description, event_background, avatar, created_by, created_at, auto_mode, dialogue_density, preset_id)
+          INSERT INTO rooms (id, name, description, event_background, avatar, creator_id, created_at, auto_mode, dialogue_density, preset_id)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
         
@@ -216,7 +216,7 @@ export function importInitialData(db) {
             room.description || '',
             room.event_background || room.description || '',
             room.avatar || '聊',
-            room.created_by,
+            room.creator_id || room.created_by || 1,
             room.created_at,
             room.auto_mode || 0,
             room.dialogue_density || 2,
@@ -272,15 +272,19 @@ export function importInitialData(db) {
       // 5. 导入房间成员
       if (initialData.data.room_members?.length > 0) {
         const insertMember = db.prepare(`
-          INSERT INTO room_members (room_id, user_id, joined_at)
-          VALUES (?, ?, ?)
+          INSERT INTO room_members (room_id, user_id, joined_at, role_name, role_profile, avatar, last_read_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `)
         
         for (const member of initialData.data.room_members) {
           insertMember.run(
             member.room_id,
             member.user_id,
-            member.joined_at
+            member.joined_at,
+            member.role_name || null,
+            member.role_profile || null,
+            member.avatar || null,
+            member.last_read_at || null
           )
         }
         console.log(`      ✅ 导入了 ${initialData.data.room_members.length} 条成员关系`)
