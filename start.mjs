@@ -2,6 +2,7 @@
 import Database from 'better-sqlite3'
 import { join } from 'path'
 import { mkdirSync, existsSync } from 'fs'
+import { importInitialData } from './import-initial-data.mjs'
 
 console.log('🚀 开始初始化...')
 console.log('当前工作目录:', process.cwd())
@@ -43,6 +44,10 @@ try {
   // 测试写入
   db.exec('CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY)')
   console.log('✅ 数据库写入测试成功')
+  
+  // 导入初始数据（如果是首次启动）
+  importInitialData(db)
+  
   db.close()
   
   console.log('✅ 所有检查通过，启动Nuxt应用...')

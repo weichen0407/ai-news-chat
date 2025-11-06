@@ -23,8 +23,13 @@ logs
 .env.*
 !.env.example
 
-# Database
+# Database (本地数据库)
 data/
 *.db
 *.db-shm
 *.db-wal
+
+# 但允许初始数据JSON文件
+!server/data/
+!server/data/initial-data.json
+!server/data/preset-dramas.json
