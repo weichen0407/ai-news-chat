@@ -100,11 +100,9 @@ function createTables(db) {
   // 好友关系表
   db.exec(`
     CREATE TABLE IF NOT EXISTS friendships (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
-      friend_user_id INTEGER,
-      friend_npc_id INTEGER,
-      friend_type TEXT NOT NULL,
-      status TEXT DEFAULT 'accepted',
+      friend_id INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `)
@@ -356,17 +354,15 @@ export function importInitialData(db) {
       // 9. 导入好友关系（如果有）
       if (initialData.data.friendships?.length > 0) {
         const insertFriendship = db.prepare(`
-          INSERT INTO friendships (user_id, friend_user_id, friend_npc_id, friend_type, status, created_at)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO friendships (id, user_id, friend_id, created_at)
+          VALUES (?, ?, ?, ?)
         `)
         
         for (const friendship of initialData.data.friendships) {
           insertFriendship.run(
+            friendship.id,
             friendship.user_id,
-            friendship.friend_user_id,
-            friendship.friend_npc_id,
-            friendship.friend_type,
-            friendship.status || 'accepted',
+            friendship.friend_id || friendship.friend_user_id,
             friendship.created_at
           )
         }
