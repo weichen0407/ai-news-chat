@@ -1,243 +1,555 @@
 <template>
-  <div class="admin-page">
-    <div class="admin-header">
-      <h1>🔧 数据库管理后台</h1>
-      <div class="admin-actions">
-        <button @click="refreshData" class="btn-refresh">🔄 刷新</button>
-        <button @click="goBack" class="btn-back">← 返回</button>
+  <div class="admin-database">
+    <!-- 顶部导航栏 -->
+    <div class="admin-navbar">
+      <div class="nav-left">
+        <h1>🗄️ 数据库管理</h1>
+        <div class="breadcrumb">
+          <span @click="$router.push('/admin')">管理后台</span>
+          <span class="separator">›</span>
+          <span class="current">数据库</span>
+        </div>
+      </div>
+      <div class="nav-right">
+        <button @click="refreshData" class="btn btn-refresh" :disabled="loading">
+          <span v-if="loading">🔄 加载中...</span>
+          <span v-else>🔄 刷新数据</span>
+        </button>
+        <button @click="exportData" class="btn btn-export">
+          📥 导出数据
+        </button>
+        <button @click="$router.push('/admin')" class="btn btn-back">
+          ← 返回
+        </button>
       </div>
     </div>
 
-    <div v-if="loading" class="loading">
-      <p>加载中...</p>
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>正在加载数据...</p>
     </div>
 
-    <div v-else-if="error" class="error">
+    <!-- 错误提示 -->
+    <div v-else-if="error" class="error-container">
+      <div class="error-icon">⚠️</div>
       <p>{{ error }}</p>
+      <button @click="refreshData" class="btn btn-primary">重试</button>
     </div>
 
-    <div v-else-if="data" class="admin-content">
-      <!-- 统计卡片 - 紧凑版 -->
-      <div class="stats-bar">
-        <div class="stat-item">
-          <span class="stat-label">用户</span>
-          <span class="stat-value">{{ data.stats.totalUsers }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">房间</span>
-          <span class="stat-value">{{ data.stats.totalRooms }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">消息</span>
-          <span class="stat-value">{{ data.stats.totalMessages }}</span>
+    <!-- 主内容 -->
+    <div v-else class="admin-container">
+      <!-- 统计概览 -->
+      <div class="stats-overview">
+        <div class="stat-card" v-for="stat in stats" :key="stat.key">
+          <div class="stat-icon">{{ stat.icon }}</div>
+          <div class="stat-info">
+            <div class="stat-label">{{ stat.label }}</div>
+            <div class="stat-value">{{ stat.value }}</div>
+            <div class="stat-trend" v-if="stat.trend">{{ stat.trend }}</div>
+          </div>
         </div>
       </div>
 
-      <!-- 房间表格 -->
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width: 40px"></th>
-              <th style="width: 80px">ID</th>
-              <th>房间名</th>
-              <th>群主</th>
-              <th>成员</th>
-              <th>NPC</th>
-              <th>消息</th>
-              <th>创建时间</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="room in data.rooms" :key="room.id">
-              <!-- 主行 -->
-              <tr class="room-row" @click="toggleRoom(room.id)">
-                <td class="expand-cell">
-                  <span class="expand-icon">{{ expandedRooms[room.id] ? '▼' : '▶' }}</span>
-                </td>
-                <td class="room-id">{{ room.id }}</td>
-                <td><strong>{{ room.name }}</strong></td>
-                <td>{{ room.creator_nickname || room.creator_name }}</td>
-                <td>{{ room.members?.length || 0 }}</td>
-                <td>{{ room.npcs?.length || 0 }}</td>
-                <td>
-                  <span class="msg-badge">{{ room.message_count }}</span>
-                  <span class="msg-detail">(👤{{ room.player_message_count }} 🤖{{ room.ai_message_count }})</span>
-                </td>
-                <td class="time-cell">{{ formatShortDate(room.created_at) }}</td>
+      <!-- 标签页导航 -->
+      <div class="tabs-nav">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          :class="['tab-btn', { active: activeTab === tab.key }]"
+          @click="activeTab = tab.key"
+        >
+          <span class="tab-icon">{{ tab.icon }}</span>
+          <span class="tab-label">{{ tab.label }}</span>
+          <span class="tab-count">{{ tab.count }}</span>
+        </button>
+      </div>
+
+      <!-- 标签页内容 -->
+      <div class="tab-content">
+        <!-- 搜索和过滤栏 -->
+        <div class="filters-bar">
+          <div class="search-box">
+            <input
+              v-model="searchQuery"
+              type="text"
+              :placeholder="`搜索${tabs.find(t => t.key === activeTab)?.label}...`"
+              @input="handleSearch"
+            />
+            <span class="search-icon">🔍</span>
+          </div>
+          <div class="filter-actions">
+            <select v-model="sortBy" @change="handleSort" class="filter-select">
+              <option value="created_at_desc">最新创建</option>
+              <option value="created_at_asc">最早创建</option>
+              <option value="id_desc">ID降序</option>
+              <option value="id_asc">ID升序</option>
+            </select>
+            <button @click="clearFilters" class="btn btn-secondary">
+              清除筛选
+            </button>
+          </div>
+        </div>
+
+        <!-- 用户数据表 -->
+        <div v-if="activeTab === 'users'" class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>昵称</th>
+                <th>头像</th>
+                <th>注册时间</th>
+                <th>房间数</th>
+                <th>消息数</th>
+                <th>操作</th>
               </tr>
-              
-              <!-- 展开详情 -->
-              <tr v-if="expandedRooms[room.id]" class="detail-row">
-                <td colspan="8" class="detail-cell">
-                  <div class="detail-content">
-                    <!-- 剧情背景（流程图样式） -->
-                    <div class="detail-section">
-                      <div class="detail-label">📖 剧情背景演变</div>
-                      <div class="timeline">
-                        <div class="timeline-item">
-                          <div class="timeline-marker">📌</div>
-                          <div class="timeline-content">
-                            <div class="timeline-header">
-                              <span class="timeline-title">初始设定</span>
-                              <span class="timeline-time">{{ formatShortDate(room.created_at) }}</span>
-                            </div>
-                            <div class="timeline-text">{{ room.event_background }}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+            </thead>
+            <tbody>
+              <tr v-for="user in filteredUsers" :key="user.id">
+                <td>{{ user.id }}</td>
+                <td><code>{{ user.username }}</code></td>
+                <td>{{ user.nickname }}</td>
+                <td>
+                  <img v-if="user.avatar" :src="user.avatar" class="avatar-thumb" />
+                  <span v-else>-</span>
+                </td>
+                <td>{{ formatDate(user.created_at) }}</td>
+                <td>{{ user.room_count || 0 }}</td>
+                <td>{{ user.message_count || 0 }}</td>
+                <td>
+                  <button @click="viewDetails('user', user)" class="btn-action">查看</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="filteredUsers.length === 0" class="empty-state">
+            <p>📭 暂无数据</p>
+          </div>
+        </div>
 
-                    <!-- 两栏布局 -->
-                    <div class="detail-grid">
-                      <!-- 左侧：角色列表（真人+AI） -->
-                      <div class="detail-section">
-                        <div class="detail-label">👥 角色列表 (真人{{ room.members?.length || 0 }} + AI{{ room.npcs?.length || 0 }})</div>
-                        <div class="mini-table">
-                          <!-- 真人玩家 -->
-                          <div v-for="member in room.members" :key="'user-' + member.user_id" class="mini-row player-row">
-                            <span class="role-type player-badge">👤</span>
-                            <div class="mini-col">
-                              <strong>{{ member.nickname }}</strong>
-                              <span class="username">({{ member.username }})</span>
-                              <div v-if="member.role_name" class="role-info">角色: {{ member.role_name }}</div>
-                            </div>
-                            <div class="mini-time">{{ formatShortDate(member.joined_at) }}</div>
-                          </div>
-                          
-                          <!-- AI角色 -->
-                          <div v-for="npc in room.npcs" :key="'npc-' + npc.id" class="mini-row ai-row">
-                            <span class="role-type ai-badge">🤖</span>
-                            <div class="mini-col">
-                              <strong>{{ npc.name }}</strong>
-                              <div class="npc-profile">{{ truncate(npc.profile, 50) }}</div>
-                            </div>
-                          </div>
-                          
-                          <div v-if="(!room.members || room.members.length === 0) && (!room.npcs || room.npcs.length === 0)" class="empty-hint">无角色</div>
-                        </div>
-                      </div>
-
-                      <!-- 右侧：最新消息（可滚动） -->
-                      <div class="detail-section">
-                        <div class="detail-label">💬 最新消息 ({{ room.latest_messages?.length || 0 }})</div>
-                        <div class="messages-scroll">
-                          <div 
-                            v-for="msg in room.latest_messages" 
-                            :key="msg.id" 
-                            :class="['mini-row', 'msg-row', msg.sender_type === 'user' ? 'player-msg' : 'ai-msg']"
-                          >
-                            <div class="msg-header">
-                              <span class="msg-type-badge">{{ msg.sender_type === 'user' ? '👤' : '🤖' }}</span>
-                              <strong>{{ msg.sender_name }}</strong>
-                              <span class="mini-time">{{ formatShortDate(msg.created_at) }}</span>
-                            </div>
-                            <div class="msg-content">{{ msg.content }}</div>
-                          </div>
-                          <div v-if="!room.latest_messages || room.latest_messages.length === 0" class="empty-hint">无消息</div>
-                        </div>
-                      </div>
-                    </div>
+        <!-- 房间数据表 -->
+        <div v-if="activeTab === 'rooms'" class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>房间ID</th>
+                <th>房间名称</th>
+                <th>描述</th>
+                <th>群主</th>
+                <th>成员数</th>
+                <th>NPC数</th>
+                <th>消息数</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="room in filteredRooms" :key="room.id">
+                <td><code>{{ room.id }}</code></td>
+                <td>
+                  <div class="room-name">
+                    <span class="room-avatar">{{ room.avatar || '💬' }}</span>
+                    {{ room.name }}
                   </div>
                 </td>
+                <td>
+                  <span class="truncate">{{ truncate(room.description, 30) }}</span>
+                </td>
+                <td>{{ room.creator_nickname || room.creator_name }}</td>
+                <td>{{ room.member_count || 0 }}</td>
+                <td>{{ room.npc_count || 0 }}</td>
+                <td>{{ room.message_count || 0 }}</td>
+                <td>{{ formatDate(room.created_at) }}</td>
+                <td>
+                  <button @click="viewDetails('room', room)" class="btn-action">查看</button>
+                  <button @click="$router.push(`/room/${room.id}`)" class="btn-action">进入</button>
+                </td>
               </tr>
-            </template>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+          <div v-if="filteredRooms.length === 0" class="empty-state">
+            <p>📭 暂无数据</p>
+          </div>
+        </div>
+
+        <!-- NPC数据表 -->
+        <div v-if="activeTab === 'npcs'" class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>名称</th>
+                <th>头像</th>
+                <th>所属房间</th>
+                <th>人设简介</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="npc in filteredNpcs" :key="npc.id">
+                <td>{{ npc.id }}</td>
+                <td>{{ npc.name }}</td>
+                <td><span class="npc-avatar">{{ npc.avatar || '🤖' }}</span></td>
+                <td>
+                  <code>{{ npc.room_id }}</code><br>
+                  <small>{{ npc.room_name }}</small>
+                </td>
+                <td>
+                  <span class="truncate">{{ truncate(npc.profile, 40) }}</span>
+                </td>
+                <td>{{ formatDate(npc.created_at) }}</td>
+                <td>
+                  <button @click="viewDetails('npc', npc)" class="btn-action">查看</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="filteredNpcs.length === 0" class="empty-state">
+            <p>📭 暂无数据</p>
+          </div>
+        </div>
+
+        <!-- 消息数据表 -->
+        <div v-if="activeTab === 'messages'" class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>房间</th>
+                <th>发送者</th>
+                <th>类型</th>
+                <th>内容</th>
+                <th>发送时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="msg in filteredMessages" :key="msg.id">
+                <td>{{ msg.id }}</td>
+                <td>
+                  <code>{{ msg.room_id }}</code><br>
+                  <small>{{ msg.room_name }}</small>
+                </td>
+                <td>{{ msg.sender_name }}</td>
+                <td>
+                  <span :class="['type-badge', msg.sender_type]">
+                    {{ msg.sender_type === 'user' ? '👤 玩家' : '🤖 NPC' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="message-content">{{ truncate(msg.content, 50) }}</div>
+                </td>
+                <td>{{ formatDate(msg.created_at) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="filteredMessages.length === 0" class="empty-state">
+            <p>📭 暂无数据</p>
+          </div>
+        </div>
+
+        <!-- 朋友圈数据表 -->
+        <div v-if="activeTab === 'moments'" class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>发布者</th>
+                <th>类型</th>
+                <th>房间</th>
+                <th>内容</th>
+                <th>点赞数</th>
+                <th>评论数</th>
+                <th>发布时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="moment in filteredMoments" :key="moment.id">
+                <td>{{ moment.id }}</td>
+                <td>{{ moment.author_name || '未知' }}</td>
+                <td>
+                  <span :class="['type-badge', moment.user_id ? 'user' : 'npc']">
+                    {{ moment.user_id ? '👤 玩家' : '🤖 NPC' }}
+                  </span>
+                </td>
+                <td><code>{{ moment.room_id || '全局' }}</code></td>
+                <td>
+                  <div class="moment-content">{{ truncate(moment.content, 60) }}</div>
+                </td>
+                <td>{{ moment.like_count || 0 }}</td>
+                <td>{{ moment.comment_count || 0 }}</td>
+                <td>{{ formatDate(moment.created_at) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="filteredMoments.length === 0" class="empty-state">
+            <p>📭 暂无数据</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div v-if="showDetailsModal" class="modal-overlay" @click="closeDetails">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>{{ detailsTitle }}</h3>
+          <button @click="closeDetails" class="btn-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <pre>{{ JSON.stringify(selectedItem, null, 2) }}</pre>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
-const data = ref(null)
+// 状态
 const loading = ref(true)
 const error = ref(null)
-const expandedRooms = reactive({})
+const data = ref(null)
+const activeTab = ref('users')
+const searchQuery = ref('')
+const sortBy = ref('created_at_desc')
+const showDetailsModal = ref(false)
+const selectedItem = ref(null)
+const detailsTitle = ref('')
 
+// 标签页配置
+const tabs = computed(() => [
+  { key: 'users', label: '用户', icon: '👤', count: data.value?.users?.length || 0 },
+  { key: 'rooms', label: '房间', icon: '💬', count: data.value?.rooms?.length || 0 },
+  { key: 'npcs', label: 'NPC', icon: '🤖', count: data.value?.npcs?.length || 0 },
+  { key: 'messages', label: '消息', icon: '💭', count: data.value?.messages?.length || 0 },
+  { key: 'moments', label: '朋友圈', icon: '📸', count: data.value?.moments?.length || 0 },
+])
+
+// 统计数据
+const stats = computed(() => [
+  {
+    key: 'users',
+    icon: '👥',
+    label: '总用户数',
+    value: data.value?.stats?.totalUsers || 0,
+  },
+  {
+    key: 'rooms',
+    icon: '🏠',
+    label: '总房间数',
+    value: data.value?.stats?.totalRooms || 0,
+  },
+  {
+    key: 'messages',
+    icon: '💬',
+    label: '总消息数',
+    value: data.value?.stats?.totalMessages || 0,
+  },
+  {
+    key: 'moments',
+    icon: '📷',
+    label: '朋友圈数',
+    value: data.value?.stats?.totalMoments || 0,
+  },
+])
+
+// 过滤后的数据
+const filteredUsers = computed(() => {
+  if (!data.value?.users) return []
+  return filterAndSort(data.value.users, ['username', 'nickname'])
+})
+
+const filteredRooms = computed(() => {
+  if (!data.value?.rooms) return []
+  return filterAndSort(data.value.rooms, ['id', 'name', 'description'])
+})
+
+const filteredNpcs = computed(() => {
+  if (!data.value?.npcs) return []
+  return filterAndSort(data.value.npcs, ['name', 'profile', 'room_id'])
+})
+
+const filteredMessages = computed(() => {
+  if (!data.value?.messages) return []
+  return filterAndSort(data.value.messages, ['sender_name', 'content', 'room_id'])
+})
+
+const filteredMoments = computed(() => {
+  if (!data.value?.moments) return []
+  return filterAndSort(data.value.moments, ['content'])
+})
+
+// 加载数据
 const loadData = async () => {
   loading.value = true
   error.value = null
   try {
-    const response = await $fetch('/api/admin/database')
+    const response = await $fetch('/api/admin/database/all')
     if (response.success) {
       data.value = response.data
     } else {
       error.value = response.error || '加载失败'
     }
   } catch (err) {
-    error.value = '加载失败，请重试'
+    console.error('加载数据失败:', err)
+    error.value = '加载失败，请检查网络连接'
   } finally {
     loading.value = false
   }
 }
 
-const toggleRoom = (roomId) => {
-  expandedRooms[roomId] = !expandedRooms[roomId]
+// 过滤和排序
+const filterAndSort = (items, searchFields) => {
+  let filtered = items
+
+  // 搜索过滤
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(item =>
+      searchFields.some(field => {
+        const value = item[field]
+        return value && String(value).toLowerCase().includes(query)
+      })
+    )
+  }
+
+  // 排序
+  const [field, order] = sortBy.value.split('_')
+  filtered = [...filtered].sort((a, b) => {
+    const aVal = a[field]
+    const bVal = b[field]
+    if (order === 'desc') {
+      return bVal > aVal ? 1 : -1
+    } else {
+      return aVal > bVal ? 1 : -1
+    }
+  })
+
+  return filtered
 }
 
-const refreshData = () => { loadData() }
-const goBack = () => { navigateTo('/') }
-
-const formatShortDate = (dateStr) => {
-  if (!dateStr) return ''
+// 工具函数
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-'
   const date = new Date(dateStr)
-  const now = new Date()
-  const diff = now - date
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
-  if (days === 0) return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  if (days === 1) return '昨天'
-  if (days < 7) return `${days}天前`
-  return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 const truncate = (text, length) => {
-  if (!text) return ''
+  if (!text) return '-'
   return text.length > length ? text.substring(0, length) + '...' : text
 }
 
-onMounted(() => { loadData() })
+const refreshData = () => {
+  loadData()
+}
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  sortBy.value = 'created_at_desc'
+}
+
+const handleSearch = () => {
+  // 搜索逻辑由 computed 自动处理
+}
+
+const handleSort = () => {
+  // 排序逻辑由 computed 自动处理
+}
+
+const viewDetails = (type, item) => {
+  selectedItem.value = item
+  detailsTitle.value = `${type.toUpperCase()} 详情`
+  showDetailsModal.value = true
+}
+
+const closeDetails = () => {
+  showDetailsModal.value = false
+  selectedItem.value = null
+}
+
+const exportData = () => {
+  if (!data.value) return
+  const dataStr = JSON.stringify(data.value, null, 2)
+  const blob = new Blob([dataStr], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `database-export-${Date.now()}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <style scoped>
-.admin-page {
+.admin-database {
   min-height: 100vh;
-  background: #f5f5f5;
-  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding-bottom: 2rem;
 }
 
-.admin-header {
+/* 顶部导航栏 */
+.admin-navbar {
   background: white;
-  padding: 1rem 1.5rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
+  padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.admin-header h1 {
-  margin: 0;
-  font-size: 1.2rem;
+.nav-left h1 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.5rem;
   color: #333;
 }
 
-.admin-actions {
-  display: flex;
-  gap: 0.5rem;
+.breadcrumb {
+  font-size: 0.875rem;
+  color: #666;
 }
 
-.btn-refresh, .btn-back {
-  padding: 0.4rem 1rem;
+.breadcrumb span {
+  cursor: pointer;
+}
+
+.breadcrumb .separator {
+  margin: 0 0.5rem;
+  cursor: default;
+}
+
+.breadcrumb .current {
+  color: #667eea;
+  font-weight: 500;
+}
+
+.nav-right {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
   border: none;
-  border-radius: 4px;
-  font-size: 0.85rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
   cursor: pointer;
   font-weight: 500;
+  transition: all 0.2s;
 }
 
 .btn-refresh {
@@ -245,424 +557,452 @@ onMounted(() => { loadData() })
   color: white;
 }
 
-.btn-back {
-  background: #576b95;
+.btn-refresh:hover:not(:disabled) {
+  background: #06ad56;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-export {
+  background: #1890ff;
   color: white;
 }
 
-.btn-refresh:hover { background: #06ad56; }
-.btn-back:hover { background: #465a7f; }
+.btn-export:hover {
+  background: #0b7dda;
+}
 
-/* 统计条 - 紧凑 */
-.stats-bar {
-  display: flex;
-  gap: 1rem;
+.btn-back {
+  background: #666;
+  color: white;
+}
+
+.btn-back:hover {
+  background: #555;
+}
+
+/* 加载状态 */
+.loading-container, .error-container {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: white;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-container {
+  background: white;
+  margin: 2rem;
+  padding: 3rem;
+  border-radius: 8px;
+  color: #333;
+}
+
+.error-icon {
+  font-size: 3rem;
   margin-bottom: 1rem;
 }
 
-.stat-item {
-  flex: 1;
+/* 主容器 */
+.admin-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* 统计概览 */
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
   background: white;
-  padding: 0.8rem;
-  border-radius: 4px;
+  padding: 1.5rem;
+  border-radius: 12px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+}
+
+.stat-info {
+  flex: 1;
 }
 
 .stat-label {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: #666;
+  margin-bottom: 0.25rem;
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: bold;
-  color: #07c160;
+  color: #333;
 }
 
-/* 表格样式 */
-.table-container {
+/* 标签页 */
+.tabs-nav {
   background: white;
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow-x: auto;
+}
+
+.tab-btn {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.tab-btn:hover {
+  background: #f5f5f5;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.tab-icon {
+  font-size: 1.25rem;
+}
+
+.tab-count {
+  background: rgba(0,0,0,0.1);
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tab-btn.active .tab-count {
+  background: rgba(255,255,255,0.2);
+}
+
+/* 标签内容 */
+.tab-content {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* 过滤栏 */
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.search-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filter-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.btn-secondary:hover {
+  background: #e5e5e5;
+}
+
+/* 数据表格 */
+.data-table-container {
+  overflow-x: auto;
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .data-table thead {
-  background: #f8f8f8;
-  border-bottom: 2px solid #e5e5e5;
+  background: #f8f9fa;
 }
 
 .data-table th {
-  padding: 0.6rem 0.8rem;
+  padding: 1rem;
   text-align: left;
   font-weight: 600;
   color: #333;
-  font-size: 0.8rem;
-  white-space: nowrap;
+  border-bottom: 2px solid #e9ecef;
 }
 
 .data-table td {
-  padding: 0.6rem 0.8rem;
-  border-bottom: 1px solid #f0f0f0;
-  color: #666;
-}
-
-.room-row {
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.room-row:hover {
-  background: #fafafa;
-}
-
-.expand-cell {
-  text-align: center;
-  color: #999;
-}
-
-.expand-icon {
-  font-size: 0.7rem;
-  display: inline-block;
-  width: 20px;
-}
-
-.room-id {
-  font-family: 'Courier New', monospace;
-  color: #999;
-  font-size: 0.75rem;
-}
-
-.msg-badge {
-  font-weight: 600;
-  color: #07c160;
-}
-
-.msg-detail {
-  font-size: 0.75rem;
-  color: #999;
-  margin-left: 0.3rem;
-}
-
-.time-cell {
-  color: #999;
-  font-size: 0.75rem;
-}
-
-/* 展开详情行 */
-.detail-row {
-  background: #fafafa;
-}
-
-.detail-cell {
-  padding: 0 !important;
-}
-
-.detail-content {
   padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
 }
 
-.detail-section {
-  margin-bottom: 1rem;
+.data-table tbody tr:hover {
+  background: #f8f9fa;
 }
 
-.detail-section:last-child {
-  margin-bottom: 0;
-}
-
-.detail-label {
+.data-table code {
+  background: #f1f3f5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
   font-size: 0.8rem;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid #e5e5e5;
+  color: #495057;
 }
 
-.detail-value {
-  font-size: 0.85rem;
-  color: #666;
-  line-height: 1.5;
-  padding: 0.5rem;
-  background: white;
-  border-radius: 4px;
+.avatar-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.mini-table {
-  background: white;
-  border-radius: 4px;
-  padding: 0.5rem;
-  font-size: 0.8rem;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.mini-row {
-  padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid #f0f0f0;
-  display: flex;
-  gap: 0.5rem;
-  align-items: flex-start;
-}
-
-.mini-row:last-child {
-  border-bottom: none;
-}
-
-/* 真人玩家样式 */
-.player-row {
-  background: #f0f9ff;
-  border-left: 3px solid #3b82f6;
-  border-radius: 4px;
-  margin-bottom: 0.3rem;
-}
-
-/* AI角色样式 */
-.ai-row {
-  background: #f0fdf4;
-  border-left: 3px solid #10b981;
-  border-radius: 4px;
-  margin-bottom: 0.3rem;
-}
-
-.role-type {
-  font-size: 1rem;
-  flex-shrink: 0;
-  width: 24px;
-  text-align: center;
-}
-
-.player-badge {
-  filter: hue-rotate(200deg);
-}
-
-.ai-badge {
-  filter: hue-rotate(100deg);
-}
-
-.mini-col {
-  flex: 1;
-  min-width: 0;
-}
-
-.mini-col strong {
-  color: #333;
-  font-size: 0.85rem;
-}
-
-.username {
-  color: #999;
-  font-size: 0.75rem;
-  margin-left: 0.3rem;
-}
-
-.role-info {
-  font-size: 0.7rem;
-  color: #666;
-  margin-top: 0.2rem;
-}
-
-.mini-time {
-  font-size: 0.7rem;
-  color: #999;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.npc-profile {
-  font-size: 0.75rem;
-  color: #666;
-  margin-top: 0.2rem;
-  line-height: 1.4;
-}
-
-/* 消息滚动区域 */
-.messages-scroll {
-  background: white;
-  border-radius: 4px;
-  padding: 0.5rem;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.messages-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.messages-scroll::-webkit-scrollbar-track {
-  background: #f0f0f0;
-  border-radius: 3px;
-}
-
-.messages-scroll::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
-}
-
-.messages-scroll::-webkit-scrollbar-thumb:hover {
-  background: #999;
-}
-
-.msg-row {
-  flex-direction: column;
-  align-items: stretch;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
-  padding: 0.6rem !important;
-}
-
-/* 真人玩家消息样式 */
-.player-msg {
-  background: #f0f9ff;
-  border-left: 3px solid #3b82f6;
-}
-
-/* AI消息样式 */
-.ai-msg {
-  background: #f0fdf4;
-  border-left: 3px solid #10b981;
-}
-
-.msg-header {
+.room-name {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.3rem;
+  gap: 0.5rem;
 }
 
-.msg-type-badge {
-  font-size: 0.9rem;
-  flex-shrink: 0;
+.room-avatar, .npc-avatar {
+  font-size: 1.5rem;
 }
 
-.msg-header strong {
-  color: #333;
-  font-size: 0.8rem;
-  flex: 1;
-}
-
-.msg-content {
-  color: #555;
+.type-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
   font-size: 0.75rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
+  font-weight: 500;
+}
+
+.type-badge.user {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.type-badge.npc {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.message-content, .moment-content {
+  max-width: 400px;
   word-break: break-word;
-  padding-left: 1.5rem;
 }
 
-.empty-hint {
-  text-align: center;
-  color: #999;
-  padding: 1rem;
-  font-size: 0.75rem;
+.truncate {
+  display: block;
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* 时间线样式（剧情背景演变） */
-.timeline {
+.btn-action {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #ddd;
   background: white;
   border-radius: 4px;
-  padding: 1rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-right: 0.25rem;
+  transition: all 0.2s;
 }
 
-.timeline-item {
-  display: flex;
-  gap: 0.8rem;
-  position: relative;
+.btn-action:hover {
+  background: #f8f9fa;
+  border-color: #667eea;
+  color: #667eea;
 }
 
-.timeline-item::before {
-  content: '';
-  position: absolute;
-  left: 11px;
-  top: 30px;
-  bottom: -20px;
-  width: 2px;
-  background: linear-gradient(to bottom, #07c160 0%, transparent 100%);
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #999;
 }
 
-.timeline-item:last-child::before {
-  display: none;
+.empty-state p {
+  font-size: 1.25rem;
 }
 
-.timeline-marker {
-  font-size: 1.2rem;
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+/* 详情弹窗 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.modal-content {
   background: white;
-  border-radius: 50%;
-  z-index: 1;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.timeline-content {
-  flex: 1;
-  padding-bottom: 1rem;
-}
-
-.timeline-header {
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
 }
 
-.timeline-title {
-  font-weight: 600;
-  color: #07c160;
-  font-size: 0.85rem;
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
 }
 
-.timeline-time {
-  font-size: 0.7rem;
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
   color: #999;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
 }
 
-.timeline-text {
-  color: #555;
-  font-size: 0.8rem;
+.btn-close:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.modal-body pre {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.875rem;
   line-height: 1.6;
-  background: #f7f8fa;
-  padding: 0.8rem;
-  border-radius: 4px;
-  border-left: 3px solid #07c160;
 }
 
-.loading, .error {
-  text-align: center;
-  padding: 3rem;
-  background: white;
-  border-radius: 4px;
-}
+/* 响应式 */
+@media (max-width: 768px) {
+  .admin-navbar {
+    flex-direction: column;
+    gap: 1rem;
+  }
 
-.error {
-  color: #fa5151;
-}
+  .nav-right {
+    width: 100%;
+    justify-content: space-between;
+  }
 
-@media (max-width: 1024px) {
-  .detail-grid {
+  .stats-overview {
     grid-template-columns: 1fr;
   }
-  
-  .stats-bar {
+
+  .tabs-nav {
+    overflow-x: auto;
+  }
+
+  .tab-btn {
+    min-width: 120px;
+  }
+
+  .filters-bar {
     flex-direction: column;
+  }
+
+  .data-table {
+    font-size: 0.75rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.5rem;
   }
 }
 </style>
