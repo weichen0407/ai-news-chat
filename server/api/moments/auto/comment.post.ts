@@ -44,21 +44,6 @@ export default defineEventHandler(async (event) => {
       return { success: true, count: 0, message: '没有需要评论的朋友圈（所有朋友圈评论数≥5）' }
     }
     
-    // 获取所有NPC
-    const allNpcs = appDb.prepare(`SELECT id, name, room_id FROM npcs`).all()
-    
-    console.log(`🤖 系统共有 ${allNpcs.length} 个NPC`)
-    
-    if (allNpcs.length === 0) {
-      appDb.close()
-      chatDb.close()
-      console.log('⚠️ 系统没有NPC')
-      return { success: true, count: 0, message: '系统没有NPC可以评论' }
-    }
-    
-    appDb.close()
-    chatDb.close()
-    
     const results = []
     let commentCount = 0
     let processedCount = 0
@@ -67,14 +52,62 @@ export default defineEventHandler(async (event) => {
     // 最多处理10条朋友圈（提高处理量）
     for (const moment of momentsToComment.slice(0, 10)) {
       processedCount++
-      const numCommentsToAdd = Math.floor(Math.random() * 2) + 1
+      const momentData = moment as any
       
-      console.log(`\n📝 处理朋友圈 #${(moment as any).id} (已有${(moment as any).comment_count}条评论)`)
-      console.log(`   内容: ${((moment as any).content || '').substring(0, 30)}...`)
+      console.log(`\n📝 处理朋友圈 #${momentData.id} (已有${momentData.comment_count}条评论)`)
+      console.log(`   内容: ${(momentData.content || '').substring(0, 30)}...`)
+      
+      // 【关键修改】确定朋友圈所属的房间
+      let roomId = momentData.room_id // 先尝试使用朋友圈的room_id
+      
+      // 如果朋友圈是NPC发的，需要查询NPC所在的房间
+      if (momentData.npc_id && !roomId) {
+        const npcInfo = appDb.prepare(`SELECT room_id FROM npcs WHERE id = ?`).get(momentData.npc_id) as any
+        if (npcInfo) {
+          roomId = npcInfo.room_id
+        }
+      }
+      
+      // 如果朋友圈是玩家发的，但没有room_id，跳过（全局朋友圈暂不处理）
+      if (!roomId) {
+        console.log(`   ⚠️ 跳过：无法确定房间ID（可能是全局朋友圈）`)
+        continue
+      }
+      
+      console.log(`   🏠 房间: ${roomId}`)
+      
+      // 【关键修改】只获取同一房间的NPC
+      const roomNpcs = appDb.prepare(`
+        SELECT id, name, room_id 
+        FROM npcs 
+        WHERE room_id = ?
+      `).all(roomId) as any[]
+      
+      if (roomNpcs.length === 0) {
+        console.log(`   ⚠️ 房间 ${roomId} 没有NPC，跳过`)
+        continue
+      }
+      
+      console.log(`   🤖 房间有 ${roomNpcs.length} 个NPC`)
+      
+      // 如果朋友圈是NPC发的，排除发朋友圈的NPC自己
+      let availableNpcs = roomNpcs
+      if (momentData.npc_id) {
+        availableNpcs = roomNpcs.filter((npc: any) => npc.id !== momentData.npc_id)
+        console.log(`   （排除发布者后，剩余 ${availableNpcs.length} 个NPC可以评论）`)
+      }
+      
+      if (availableNpcs.length === 0) {
+        console.log(`   ⚠️ 没有可评论的NPC，跳过`)
+        continue
+      }
+      
+      const numCommentsToAdd = Math.floor(Math.random() * 2) + 1
       console.log(`   将添加 ${numCommentsToAdd} 条评论`)
       
       for (let i = 0; i < numCommentsToAdd; i++) {
-        const randomNpc = allNpcs[Math.floor(Math.random() * allNpcs.length)] as any
+        // 从同房间的NPC中随机选择
+        const randomNpc = availableNpcs[Math.floor(Math.random() * availableNpcs.length)] as any
         
         try {
           console.log(`   🤖 ${randomNpc.name} 正在生成评论...`)
@@ -82,7 +115,7 @@ export default defineEventHandler(async (event) => {
           const response = await $fetch('/api/moments/ai-comment', {
             method: 'POST',
             body: {
-              moment_id: (moment as any).id,
+              moment_id: momentData.id,
               npc_id: randomNpc.id
             }
           })
@@ -102,6 +135,9 @@ export default defineEventHandler(async (event) => {
         await new Promise(resolve => setTimeout(resolve, 500))
       }
     }
+    
+    appDb.close()
+    chatDb.close()
     
     console.log(`\n✅ 自动评论完成: 处理了 ${processedCount} 条朋友圈，生成了 ${commentCount} 条评论`)
     
