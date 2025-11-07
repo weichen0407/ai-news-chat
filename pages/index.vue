@@ -1491,11 +1491,22 @@ const publishMoment = async () => {
     if (response.success) {
       showCreateMomentModal.value = false
       newMoment.value = { content: '' }
-      alert('发布成功！你的好友NPC会随机评论哦~')
-      // 延迟刷新，等待评论生成
+      alert('发布成功！你的好友NPC会在几秒后评论~')
+      
+      // 立即刷新一次，显示朋友圈
+      fetchAllMoments()
+      
+      // 8秒后再次刷新，等待NPC评论（总延迟：1-3秒触发 + 1-6秒评论 = 最多9秒）
       setTimeout(() => {
+        console.log('🔄 刷新朋友圈，查看NPC评论...')
         fetchAllMoments()
-      }, 1000)
+      }, 8000)
+      
+      // 15秒后最后一次刷新，确保所有评论都显示
+      setTimeout(() => {
+        console.log('🔄 最后一次刷新朋友圈...')
+        fetchAllMoments()
+      }, 15000)
     } else {
       alert('发布失败：' + (response.error || '未知错误'))
     }
