@@ -504,6 +504,35 @@ body {
 }
 
 /* AI智能解析区域 */
+/* AI解析选项卡 */
+.ai-parse-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.tab-btn:hover {
+  background: #f5f5f5;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+}
+
 .ai-parse-section {
   background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 100%);
   border: 2px solid #667eea;

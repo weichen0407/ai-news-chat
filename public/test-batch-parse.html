@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>批量解析新闻事件 - AI剧本生成器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .main-card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+      padding: 12px 20px;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .status-loading {
+      background: #e3f2fd;
+      color: #1976d2;
+      border: 2px solid #90caf9;
+    }
+
+    .status-success {
+      background: #e8f5e9;
+      color: #388e3c;
+      border: 2px solid #81c784;
+    }
+
+    .status-error {
+      background: #ffebee;
+      color: #c62828;
+      border: 2px solid #ef5350;
+    }
+
+    .results-container {
+      margin-top: 20px;
+    }
+
+    .result-item {
+      background: #f9f9f9;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .result-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #333;
+    }
+
+    .result-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: #e8f5e9;
+      color: #388e3c;
+    }
+
+    .badge-error {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .result-section {
+      margin-bottom: 15px;
+    }
+
+    .result-section h4 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .result-section p {
+      font-size: 14px;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .npc-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .npc-item {
+      background: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.3s;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .drop-zone {
+      border: 3px dashed #667eea;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      background: #f8f9ff;
+      transition: all 0.3s;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+
+    .drop-zone:hover {
+      background: #f0f2ff;
+      border-color: #764ba2;
+    }
+
+    .drop-zone.drag-over {
+      background: #e8eaff;
+      border-color: #764ba2;
+      transform: scale(1.02);
+    }
+
+    .drop-zone-content {
+      pointer-events: none;
+    }
+
+    .file-name {
+      margin-top: 15px;
+      padding: 10px;
+      background: white;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #333;
+      display: none;
+    }
+
+    .file-name.show {
+      display: block;
+    }
+
+    .export-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .export-menu-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      min-width: 300px;
+    }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎬 AI批量剧本生成器</h1>
+      <p>从新闻热点批量生成互动剧情</p>
+    </div>
+
+    <div class="main-card">
+      <div class="input-group">
+        <label for="jsonFile">📁 JSON文件</label>
+        
+        <!-- 拖拽上传区域 -->
+        <div 
+          id="dropZone" 
+          class="drop-zone"
+          ondrop="handleDrop(event)" 
+          ondragover="handleDragOver(event)" 
+          ondragleave="handleDragLeave(event)"
+        >
+          <div class="drop-zone-content">
+            <span style="font-size: 48px;">📄</span>
+            <p style="font-size: 16px; font-weight: 600; margin: 10px 0;">拖拽 JSON 文件到这里</p>
+            <p style="font-size: 14px; color: #666;">或者</p>
+            <label for="fileInput" class="btn btn-secondary" style="margin-top: 10px; cursor: pointer;">
+              📂 选择文件
+            </label>
+            <input 
+              type="file" 
+              id="fileInput" 
+              accept=".json"
+              style="display: none;"
+              onchange="handleFileSelect(event)"
+            >
+          </div>
+          <div id="fileName" class="file-name"></div>
+        </div>
+
+        <p style="text-align: center; margin: 15px 0; color: #666; font-weight: 600;">—— 或输入文件路径 ——</p>
+        
+        <input 
+          type="text" 
+          id="jsonFile" 
+          placeholder="例如: 20251111_10.json (相对于项目根目录)"
+          value="20251111_10.json"
+        >
+        <p class="hint">💡 文件应包含 items 数组，每个 item 有 title 和 summary 字段</p>
+      </div>
+
+      <div class="button-group">
+        <button class="btn btn-primary" id="parseBtn" onclick="startBatchParse()">
+          🚀 开始批量解析
+        </button>
+        <button class="btn btn-secondary" id="exportBtn" onclick="showExportMenu()" style="display: none;">
+          📥 导出结果
+        </button>
+        <button class="btn btn-secondary" onclick="clearResults()">
+          🗑️ 清空结果
+        </button>
+      </div>
+
+      <!-- 导出菜单 -->
+      <div id="exportMenu" class="export-menu" style="display: none;">
+        <div class="export-menu-content">
+          <h4 style="margin: 0 0 15px 0;">选择导出格式</h4>
+          <button class="btn btn-primary" onclick="exportAsJSON()" style="width: 100%; margin-bottom: 10px;">
+            📄 导出为 JSON
+          </button>
+          <button class="btn btn-primary" onclick="exportAsText()" style="width: 100%; margin-bottom: 10px;">
+            📝 导出为文本
+          </button>
+          <button class="btn btn-primary" onclick="exportAsMarkdown()" style="width: 100%; margin-bottom: 10px;">
+            📋 导出为 Markdown
+          </button>
+          <button class="btn btn-secondary" onclick="hideExportMenu()" style="width: 100%;">
+            取消
+          </button>
+        </div>
+      </div>
+
+      <div id="status"></div>
+      <div id="progress"></div>
+    </div>
+
+    <div id="summaryStats"></div>
+    <div id="results"></div>
+  </div>
+
+  <script>
+    let isProcessing = false;
+    let results = [];
+    let errors = [];
+    let uploadedJsonData = null; // 存储上传的JSON数据
+
+    // 处理拖拽事件
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('dropZone').classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('dropZone').classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('dropZone').classList.remove('drag-over');
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+        if (file.type === 'application/json' || file.name.endsWith('.json')) {
+          readJsonFile(file);
+        } else {
+          alert('请上传 JSON 文件！');
+        }
+      }
+    }
+
+    // 处理文件选择
+    function handleFileSelect(e) {
+      const files = e.target.files;
+      if (files.length > 0) {
+        readJsonFile(files[0]);
+      }
+    }
+
+    // 读取JSON文件
+    function readJsonFile(file) {
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        try {
+          const jsonData = JSON.parse(e.target.result);
+          uploadedJsonData = jsonData;
+          
+          // 显示文件名
+          const fileNameEl = document.getElementById('fileName');
+          fileNameEl.innerHTML = `✅ <strong>已选择文件：</strong>${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+          fileNameEl.classList.add('show');
+          
+          // 清空路径输入框
+          document.getElementById('jsonFile').value = '';
+          
+          console.log('文件读取成功:', jsonData);
+        } catch (error) {
+          alert('JSON 文件格式错误：' + error.message);
+          uploadedJsonData = null;
+        }
+      };
+      
+      reader.onerror = function() {
+        alert('文件读取失败！');
+        uploadedJsonData = null;
+      };
+      
+      reader.readAsText(file);
+    }
+
+    async function startBatchParse() {
+      if (isProcessing) return;
+
+      const jsonFile = document.getElementById('jsonFile').value.trim();
+      const statusEl = document.getElementById('status');
+      const resultsEl = document.getElementById('results');
+      const progressEl = document.getElementById('progress');
+      const summaryStatsEl = document.getElementById('summaryStats');
+      const parseBtn = document.getElementById('parseBtn');
+
+      // 检查是否有上传的文件或路径
+      if (!uploadedJsonData && !jsonFile) {
+        statusEl.innerHTML = '<div class="status status-error">❌ 请上传JSON文件或输入文件路径</div>';
+        return;
+      }
+
+      isProcessing = true;
+      parseBtn.disabled = true;
+      results = [];
+      errors = [];
+      resultsEl.innerHTML = '';
+      summaryStatsEl.innerHTML = '';
+      
+      statusEl.innerHTML = '<div class="status status-loading">🔄 正在读取JSON文件...</div>';
+
+      try {
+        let jsonData;
+        
+        // 优先使用上传的文件
+        if (uploadedJsonData) {
+          console.log('使用上传的文件数据');
+          jsonData = uploadedJsonData;
+        } else {
+          // 否则从路径读取
+          console.log('从路径读取文件:', jsonFile);
+          const jsonResponse = await fetch(`/${jsonFile}`);
+          if (!jsonResponse.ok) {
+            throw new Error(`无法读取文件: ${jsonFile}`);
+          }
+          jsonData = await jsonResponse.json();
+        }
+        
+        if (!jsonData.items || !Array.isArray(jsonData.items)) {
+          throw new Error('JSON格式错误：缺少items数组');
+        }
+
+        const totalItems = jsonData.items.length;
+        
+        // 显示初始统计
+        updateStats(totalItems, 0, 0);
+        
+        statusEl.innerHTML = `
+          <div class="status status-loading">
+            🔄 开始批量解析... (共 ${totalItems} 个事件)
+          </div>
+        `;
+
+        // 初始化进度条
+        progressEl.innerHTML = `
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: 0%"></div>
+          </div>
+          <p style="text-align: center; margin-top: 10px; font-size: 14px; color: #666;">
+            正在处理: <span id="currentProgress">0</span>/${totalItems}
+          </p>
+        `;
+
+        // 逐个处理事件
+        for (let i = 0; i < jsonData.items.length; i++) {
+          const item = jsonData.items[i];
+          const currentNum = i + 1;
+          
+          // 更新状态
+          statusEl.innerHTML = `
+            <div class="status status-loading">
+              🔄 正在解析事件 ${currentNum}/${totalItems}: ${item.title}
+            </div>
+          `;
+          
+          // 更新进度条
+          const progress = (currentNum / totalItems * 100).toFixed(1);
+          const progressFill = progressEl.querySelector('.progress-fill');
+          const progressText = document.getElementById('currentProgress');
+          if (progressFill) progressFill.style.width = progress + '%';
+          if (progressText) progressText.textContent = currentNum;
+
+          try {
+            // 调用单个事件解析API
+            const text = `【标题】${item.title}\n\n【详细内容】\n${item.summary}`;
+            
+            const response = await fetch('/api/creator/ai-parse', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              results.push({
+                sourceEvent: {
+                  title: item.title,
+                  rank: item.rank,
+                  query: item.query
+                },
+                story: result.story,
+                npcs: result.npcs,
+                reasoning: result.reasoning
+              });
+              
+              // 实时显示成功的结果
+              appendResult(results[results.length - 1], results.length);
+              
+            } else {
+              errors.push({
+                event: {
+                  title: item.title,
+                  rank: item.rank,
+                  query: item.query
+                },
+                error: result.error || '解析失败'
+              });
+            }
+
+          } catch (error) {
+            console.error(`解析事件 ${item.title} 失败:`, error);
+            errors.push({
+              event: {
+                title: item.title,
+                rank: item.rank,
+                query: item.query
+              },
+              error: error.message
+            });
+          }
+
+          // 更新统计
+          updateStats(totalItems, results.length, errors.length);
+
+          // 添加延迟，避免API限流
+          if (i < jsonData.items.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        // 完成
+        statusEl.innerHTML = `
+          <div class="status status-success">
+            ✅ 批量解析完成！
+            <br>成功: ${results.length} | 失败: ${errors.length}
+          </div>
+        `;
+
+        // 显示导出按钮
+        if (results.length > 0) {
+          document.getElementById('exportBtn').style.display = 'block';
+        }
+
+        // 显示失败的结果
+        if (errors.length > 0) {
+          let errorsHtml = '<h2 style="margin: 30px 0 20px 0;">❌ 解析失败的事件</h2>';
+          errors.forEach((error) => {
+            errorsHtml += `
+              <div class="result-item">
+                <div class="result-header">
+                  <div class="result-title">${error.event.title}</div>
+                  <span class="result-badge badge-error">❌ 失败</span>
+                </div>
+                <div class="result-section">
+                  <h4>错误信息</h4>
+                  <p style="color: #c62828;">${error.error}</p>
+                </div>
+              </div>
+            `;
+          });
+          resultsEl.innerHTML += errorsHtml;
+        }
+
+      } catch (error) {
+        console.error('批量解析失败:', error);
+        statusEl.innerHTML = `
+          <div class="status status-error">
+            ❌ 批量解析失败: ${error.message}
+          </div>
+        `;
+      } finally {
+        isProcessing = false;
+        parseBtn.disabled = false;
+      }
+    }
+
+    function updateStats(total, succeeded, failed) {
+      const summaryStatsEl = document.getElementById('summaryStats');
+      summaryStatsEl.innerHTML = `
+        <div class="summary-stats">
+          <div class="stat-card">
+            <div class="stat-number">${total}</div>
+            <div class="stat-label">总事件数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">${succeeded}</div>
+            <div class="stat-label">解析成功</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">${failed}</div>
+            <div class="stat-label">解析失败</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function appendResult(item, index) {
+      const resultsEl = document.getElementById('results');
+      
+      // 如果是第一个结果，添加标题
+      if (index === 1) {
+        resultsEl.innerHTML = '<h2 style="margin-bottom: 20px;">✨ 生成的剧本</h2>';
+      }
+      
+      const resultHtml = `
+        <div class="result-item" id="result-${index}">
+          <div class="result-header">
+            <div class="result-title">
+              ${index}. ${item.story.name}
+            </div>
+            <span class="result-badge badge-success">✅ 成功</span>
+          </div>
+          
+          <div class="result-section">
+            <h4>📰 原始事件</h4>
+            <p><strong>标题:</strong> ${item.sourceEvent.title}</p>
+            <p><strong>排名:</strong> #${item.sourceEvent.rank} | <strong>查询:</strong> ${item.sourceEvent.query}</p>
+          </div>
+
+          <div class="result-section">
+            <h4>📖 剧情简介</h4>
+            <p>${item.story.description}</p>
+          </div>
+
+          <div class="result-section">
+            <h4>🎭 事件背景</h4>
+            <p>${item.story.eventBackground}</p>
+          </div>
+
+          <div class="result-section">
+            <h4>👥 角色列表 (${item.npcs.length}个)</h4>
+            <div class="npc-list">
+              ${item.npcs.map(npc => `
+                <div class="npc-item">
+                  ${npc.avatar || '👤'} ${npc.name} - ${npc.occupation || '角色'}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="result-section">
+            <h4>💭 解析说明</h4>
+            <p style="font-size: 13px; color: #666;">${item.reasoning}</p>
+          </div>
+        </div>
+      `;
+      
+      resultsEl.innerHTML += resultHtml;
+      
+      // 滚动到新添加的结果
+      setTimeout(() => {
+        const newResult = document.getElementById(`result-${index}`);
+        if (newResult) {
+          newResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 100);
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('status').innerHTML = '';
+      document.getElementById('progress').innerHTML = '';
+      document.getElementById('summaryStats').innerHTML = '';
+      document.getElementById('fileName').classList.remove('show');
+      document.getElementById('fileName').innerHTML = '';
+      document.getElementById('exportBtn').style.display = 'none';
+      uploadedJsonData = null;
+      results = [];
+      errors = [];
+    }
+
+    // 显示/隐藏导出菜单
+    function showExportMenu() {
+      document.getElementById('exportMenu').style.display = 'flex';
+    }
+
+    function hideExportMenu() {
+      document.getElementById('exportMenu').style.display = 'none';
+    }
+
+    // 导出为 JSON
+    function exportAsJSON() {
+      const exportData = {
+        exportTime: new Date().toISOString(),
+        summary: {
+          total: results.length + errors.length,
+          succeeded: results.length,
+          failed: errors.length
+        },
+        results: results,
+        errors: errors
+      };
+
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `batch-parse-results-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      hideExportMenu();
+      alert('✅ JSON 文件已导出！');
+    }
+
+    // 导出为文本
+    function exportAsText() {
+      let text = '=' .repeat(60) + '\n';
+      text += 'AI 批量剧本生成结果\n';
+      text += '=' .repeat(60) + '\n\n';
+      text += `导出时间: ${new Date().toLocaleString('zh-CN')}\n`;
+      text += `总事件数: ${results.length + errors.length}\n`;
+      text += `成功: ${results.length} | 失败: ${errors.length}\n\n`;
+
+      results.forEach((item, index) => {
+        text += '=' .repeat(60) + '\n';
+        text += `${index + 1}. ${item.story.name}\n`;
+        text += '=' .repeat(60) + '\n\n';
+        
+        text += '【原始事件】\n';
+        text += `标题: ${item.sourceEvent.title}\n`;
+        text += `排名: #${item.sourceEvent.rank}\n`;
+        text += `查询: ${item.sourceEvent.query}\n\n`;
+        
+        text += '【剧情简介】\n';
+        text += `${item.story.description}\n\n`;
+        
+        text += '【事件背景】\n';
+        text += `${item.story.eventBackground}\n\n`;
+        
+        text += `【角色列表】(${item.npcs.length}个)\n`;
+        item.npcs.forEach((npc, i) => {
+          text += `${i + 1}. ${npc.avatar || '👤'} ${npc.name} - ${npc.occupation || '角色'}\n`;
+          text += `   性格: ${npc.personality}\n`;
+          if (npc.background) text += `   背景: ${npc.background}\n`;
+          if (npc.goals) text += `   目标: ${npc.goals}\n`;
+          text += '\n';
+        });
+        
+        text += '【解析说明】\n';
+        text += `${item.reasoning}\n\n`;
+      });
+
+      if (errors.length > 0) {
+        text += '=' .repeat(60) + '\n';
+        text += '失败的事件\n';
+        text += '=' .repeat(60) + '\n\n';
+        errors.forEach((error, index) => {
+          text += `${index + 1}. ${error.event.title}\n`;
+          text += `   错误: ${error.error}\n\n`;
+        });
+      }
+
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `batch-parse-results-${Date.now()}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      hideExportMenu();
+      alert('✅ 文本文件已导出！');
+    }
+
+    // 导出为 Markdown
+    function exportAsMarkdown() {
+      let md = '# AI 批量剧本生成结果\n\n';
+      md += `**导出时间:** ${new Date().toLocaleString('zh-CN')}\n\n`;
+      md += `**统计信息:**\n`;
+      md += `- 总事件数: ${results.length + errors.length}\n`;
+      md += `- 成功: ${results.length}\n`;
+      md += `- 失败: ${errors.length}\n\n`;
+      md += '---\n\n';
+
+      results.forEach((item, index) => {
+        md += `## ${index + 1}. ${item.story.name}\n\n`;
+        
+        md += '### 📰 原始事件\n\n';
+        md += `- **标题:** ${item.sourceEvent.title}\n`;
+        md += `- **排名:** #${item.sourceEvent.rank}\n`;
+        md += `- **查询:** ${item.sourceEvent.query}\n\n`;
+        
+        md += '### 📖 剧情简介\n\n';
+        md += `${item.story.description}\n\n`;
+        
+        md += '### 🎭 事件背景\n\n';
+        md += `${item.story.eventBackground}\n\n`;
+        
+        md += `### 👥 角色列表 (${item.npcs.length}个)\n\n`;
+        item.npcs.forEach((npc, i) => {
+          md += `#### ${i + 1}. ${npc.avatar || '👤'} ${npc.name}\n\n`;
+          md += `- **职业:** ${npc.occupation || '未知'}\n`;
+          md += `- **性格:** ${npc.personality}\n`;
+          if (npc.background) md += `- **背景:** ${npc.background}\n`;
+          if (npc.goals) md += `- **目标:** ${npc.goals}\n`;
+          if (npc.skills) md += `- **技能:** ${npc.skills}\n`;
+          md += '\n';
+        });
+        
+        md += '### 💭 解析说明\n\n';
+        md += `${item.reasoning}\n\n`;
+        md += '---\n\n';
+      });
+
+      if (errors.length > 0) {
+        md += '## ❌ 失败的事件\n\n';
+        errors.forEach((error, index) => {
+          md += `${index + 1}. **${error.event.title}**\n`;
+          md += `   - 错误: ${error.error}\n\n`;
+        });
+      }
+
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `batch-parse-results-${Date.now()}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      hideExportMenu();
+      alert('✅ Markdown 文件已导出！');
+    }
+  </script>
+</body>
+</html>
+
